@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+from statistics import median
 from urllib.parse import urlparse, unquote, parse_qs
 
 from .core import analyze, prepare
@@ -131,7 +132,7 @@ class Handler(BaseHTTPRequestHandler):
             scenario = asyncio.run(scenario_matrix(conservative, growth))
             latencies = sorted(r["metrics"]["wall_latency_ms"] for r in runs)
             validity = [r["metrics"]["citation_validity"] for r in runs if r["metrics"]["citation_validity"] is not None]
-            summary = {"run_count": len(runs), "latency_ms": {"median": latencies[len(latencies)//2] if latencies else None,
+            summary = {"run_count": len(runs), "latency_ms": {"median": median(latencies) if latencies else None,
                       "min": latencies[0] if latencies else None, "max": latencies[-1] if latencies else None},
                       "citation_validity_mean": round(sum(validity)/len(validity), 3) if validity else None,
                       "agent_overlap_count": sum(bool(r["metrics"]["agent_overlap"]) for r in runs),

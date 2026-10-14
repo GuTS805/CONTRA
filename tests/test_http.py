@@ -88,6 +88,9 @@ class HttpTests(unittest.TestCase):
         _, early = self.request_json("/v1/analyses", "POST", {"ticker": "ALPHA.NS",
                                       "investor_id": "demo_conservative", "as_of": "2026-06-12"})
         self.assertEqual(early["synthesis"]["state"], "INSUFFICIENT_EVIDENCE")
+        _, two_run_evaluation = self.request_json("/v1/evaluations/summary")
+        expected_median = (report["metrics"]["wall_latency_ms"] + early["metrics"]["wall_latency_ms"]) / 2
+        self.assertAlmostEqual(two_run_evaluation["latency_ms"]["median"], expected_median)
 
     def test_profile_revision_and_bad_input(self):
         _, before = self.request_json("/v1/profiles/demo_conservative/portfolio")
