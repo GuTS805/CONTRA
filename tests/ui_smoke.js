@@ -23,6 +23,13 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  assert(element('#view').innerHTML.includes('Simulated price path'));
  assert(element('#view').innerHTML.includes('Download JSON'));
  assert(element('#view').innerHTML.includes('Show calculation and sources'));
+ assert(element('#view').innerHTML.includes('PERSONALIZED PORTFOLIO ACTION'));
+ assert(element('#view').innerHTML.includes('Reduce exposure'));
+ assert(element('#view').innerHTML.includes('Ask the filings'));
+ await vm.runInContext("askFilings(first,'Any new contracts or orders?')",context);
+ assert(element('#ask-result').innerHTML.includes('E-ALPHA-03'));
+ await vm.runInContext("askFilings(first,'weather forecast')",context);
+ assert(element('#ask-result').innerHTML.includes('abstains'));
  const second=await analysis('demo_growth');context.second=second;
  vm.runInContext('state.comparison={left:first,right:second};state.report=second;reportView(second)',context);
  assert(element('#view').innerHTML.includes('Same market, different investor'));

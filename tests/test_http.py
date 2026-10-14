@@ -101,6 +101,25 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(frozen_doc, report["evidence"][0])
         _, frozen_profile = self.request_json(f"/v1/analyses/{report['run_id']}/evidence/demo_conservative")
         self.assertEqual(frozen_profile, report["investor_snapshot"])
+        self.assertEqual(report["recommendation"]["action"], "REDUCE_EXPOSURE")
+        _, history_row = self.request_json("/v1/analyses?investor_id=demo_conservative&limit=1")
+        self.assertEqual(history_row["runs"][0]["action"], "REDUCE_EXPOSURE")
+        _, answer = self.request_json(f"/v1/analyses/{report['run_id']}/ask?q=operating%20margin%20costs")
+        self.assertEqual(answer["passages"][0]["id"], "E-ALPHA-01")
+        _, cited_answer = self.request_json(f"/v1/analyses/{report['run_id']}/evidence/{answer['passages'][0]['id']}")
+        self.assertEqual(cited_answer["excerpt"], answer["passages"][0]["excerpt"])
+        for path, expected in ((f"/v1/analyses/{report['run_id']}/ask", 400),
+                               (f"/v1/analyses/{report['run_id']}/ask?q=" + "x" * 301, 400),
+                               ("/v1/analyses/run_missing/ask?q=margin", 404),
+                               ("/v1/profiles/nobody/insights", 404)):
+            with self.subTest(path=path[:60]):
+                with self.assertRaises(HTTPError) as caught:
+                    self.request_json(path)
+                self.assertEqual(caught.exception.code, expected)
+        _, insights = self.request_json("/v1/profiles/demo_growth/insights")
+        self.assertEqual(insights["profile_id"], "demo_growth")
+        self.assertTrue(all({"ticker", "weight", "cap", "breach", "trim_to_cap", "headroom_value"} <= set(h)
+                            for h in insights["holdings"]))
         _, evaluation = self.request_json("/v1/evaluations/summary")
         self.assertEqual(evaluation["scenario_checks"]["passed"], evaluation["scenario_checks"]["total"])
         self.assertEqual(evaluation["scenario_checks"]["citation_fabrication_count"], 0)

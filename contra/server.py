@@ -10,7 +10,7 @@ from pathlib import Path
 from statistics import median
 from urllib.parse import urlparse, unquote, parse_qs
 
-from .core import analyze, prepare
+from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
 from .llm import configured as llm_configured
@@ -97,6 +97,10 @@ class Handler(BaseHTTPRequestHandler):
             with connect() as db:
                 item = profile(db, ident)
             return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Unknown investor")
+        if path.startswith("/v1/profiles/") and path.endswith("/insights") and len(path.split("/")) == 5:
+            with connect() as db:
+                item = profile(db, path.split("/")[3])
+            return self._send(200, portfolio_insights(item)) if item else self._error(404, "NOT_FOUND", "Unknown investor")
         if path == "/v1/analyses":
             params = parse_qs(urlparse(self.path).query)
             investor = params.get("investor_id", [None])[0]
@@ -112,9 +116,22 @@ class Handler(BaseHTTPRequestHandler):
             summaries = [{"run_id": report["run_id"], "ticker": report["ticker"],
                           "investor_id": report["investor_id"], "created_at": report["created_at"],
                           "as_of": report["as_of"], "state": report["synthesis"]["state"],
+                          "action": (report.get("recommendation") or {}).get("action"),
                           "data_mode": report["data_mode"]} for report in reports]
             return self._send(200, {"runs": summaries, "count": len(summaries), "total": total,
                                     "limit": limit, "offset": offset, "has_more": offset + len(summaries) < total})
+        if path.startswith("/v1/analyses/") and path.endswith("/ask") and len(path.split("/")) == 5:
+            with connect() as db:
+                report = run(db, path.split("/")[3])
+            if report is None:
+                return self._error(404, "NOT_FOUND", "Unknown run")
+            question = parse_qs(urlparse(self.path).query).get("q", [None])[0]
+            try:
+                return self._send(200, ask_filings(report, question))
+            except ValueError as exc:
+                return self._error(400, "BAD_INPUT", str(exc))
+            except LookupError as exc:
+                return self._error(409, "LEGACY_RUN", str(exc))
         if path.startswith("/v1/analyses/") and "/evidence/" in path:
             parts = path.split("/")
             if len(parts) != 6 or parts[4] != "evidence":

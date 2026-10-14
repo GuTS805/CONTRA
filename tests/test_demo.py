@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from contra.core import analyze, prepare, numeric_signals, retrieve
+from contra.core import analyze, ask_filings, numeric_signals, portfolio_insights, prepare, retrieve
 from contra.evaluation import scenario_matrix
 from contra.fixtures import AS_OF, documents
 from contra.store import RunIntegrityError, connect, profile, save_run, run, update_profile, verify_run
@@ -28,7 +28,10 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["synthesis"]["state"], "CONFLICTED")
         self.assertTrue(report["synthesis"]["market_research_disagreement"])
         self.assertTrue(report["synthesis"]["suitability_breach"])
-        self.assertIn("At least one cited filing is over 120 days old", report["agents"]["research"]["warnings"])
+        cited = [d["id"] for d in report["evidence"]]
+        self.assertNotIn("E-ALPHA-04", cited, "a filing older than 180 days must not drive current tone")
+        self.assertIn("E-ALPHA-03", cited, "plural/singular query terms must match the contract excerpt")
+        self.assertEqual(report["signals"]["filing_tone"]["label"], "NEGATIVE")
         self.assertTrue(report["metrics"]["agent_overlap"])
         self.assertTrue(all(a["execution_mode"] == "DETERMINISTIC_FALLBACK" for a in report["agents"].values()))
         sources = {d["id"]: d for d in report["evidence"]}
@@ -87,7 +90,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["market_snapshot"]["bars"][0]["timezone"], "Asia/Kolkata")
         self.assertFalse(report["market_snapshot"]["bars"][0]["adjusted"])
         self.assertEqual(report["investor_snapshot"]["id"], "demo_conservative")
-        self.assertEqual(report["method_version"], "rules-1.1")
+        self.assertEqual(report["method_version"], "rules-1.2")
         self.assertEqual(report["market_snapshot"]["document_ids"],
                          [d["id"] for d in documents() if d["ticker"] == "ALPHA.NS" and d["published_at"] <= AS_OF])
         self.assertEqual(len(report["market_snapshot"]["documents"]), len(report["market_snapshot"]["document_ids"]))
@@ -206,6 +209,63 @@ class DemoTests(unittest.TestCase):
         del unversioned["method_version"]
         del unversioned["market_snapshot"]
         self.assertIs(verify_run(unversioned), unversioned)
+
+    def test_recommendations_are_personal_sized_and_cited(self):
+        conservative = self.analyze("ALPHA.NS")["recommendation"]
+        self.assertEqual(conservative["action"], "REDUCE_EXPOSURE")
+        self.assertEqual(conservative["sizing"]["change_value"], -5000)
+        self.assertEqual(conservative["sizing"]["target_weight"], .10)
+        self.assertTrue(all(reason["evidence_ids"] for reason in conservative["reasons"]))
+        self.assertTrue(conservative["would_change"])
+        growth = self.analyze("ALPHA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(growth["action"], "HOLD_REVIEW")
+        self.assertIsNone(growth["sizing"])
+        gamma = self.analyze("GAMMA.NS")["recommendation"]
+        self.assertEqual(gamma["action"], "ELIGIBLE_TO_ADD")
+        self.assertEqual(gamma["sizing"]["change_value"], 5000)
+        delta = self.analyze("DELTA.NS")["recommendation"]
+        self.assertEqual(delta["action"], "HOLD_REVIEW")
+        self.assertTrue(delta["headline"].startswith("Do not open a position"), "an unheld stock cannot be held")
+        self.assertEqual(self.analyze("ALPHA.NS", as_of="2026-06-12")["recommendation"]["action"], "NO_VIEW")
+
+    def test_addition_is_limited_by_available_cash(self):
+        update_profile(self.db, "demo_growth", {"positions": [{"ticker": "GAMMA.NS", "value": 5000},
+                                                               {"ticker": "ALPHA.NS", "value": 93000},
+                                                               {"ticker": "CASH", "value": 2000}],
+                                                "max_single_asset_weight": 1, "max_sector_weight": 1})
+        recommendation = self.analyze("GAMMA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(recommendation["action"], "ELIGIBLE_TO_ADD")
+        self.assertEqual(recommendation["sizing"]["change_value"], 2000)
+
+    def test_sector_breach_trim_clears_both_limits(self):
+        update_profile(self.db, "demo_growth", {"max_sector_weight": .30})
+        recommendation = self.analyze("ALPHA.NS", "demo_growth")["recommendation"]
+        # Technology is 40,000 of 100,000; a 30% sector cap needs a 10,000 trim, larger than the single-name excess.
+        self.assertEqual(recommendation["action"], "REDUCE_EXPOSURE")
+        self.assertEqual(recommendation["sizing"]["change_value"], -10000)
+
+    def test_ask_filings_is_extractive_and_abstains(self):
+        report = self.analyze("ALPHA.NS")
+        answer = ask_filings(report, "Any new contracts or orders?")
+        self.assertEqual(answer["passages"][0]["id"], "E-ALPHA-03")
+        stored = {d["id"]: d["excerpt"] for d in report["market_snapshot"]["documents"]}
+        self.assertTrue(all(p["excerpt"] == stored[p["id"]] for p in answer["passages"]))
+        self.assertEqual(ask_filings(report, "what did they say about the weather")["answer_status"], "NO_SUPPORTING_PASSAGE")
+        self.assertEqual(ask_filings(report, "the and which")["passages"], [])
+        with self.assertRaises(ValueError):
+            ask_filings(report, "x")
+        future = ask_filings(self.analyze("DELTA.NS"), "future outlook cash operations")
+        self.assertEqual(future["passages"], [], "documents after the as-of date are never searchable")
+
+    def test_portfolio_insights_size_each_limit(self):
+        insights = portfolio_insights(profile(self.db, "demo_conservative"))
+        holdings = {h["ticker"]: h for h in insights["holdings"]}
+        self.assertTrue(holdings["ALPHA.NS"]["breach"])
+        self.assertEqual(holdings["ALPHA.NS"]["trim_to_cap"], 5000)
+        self.assertEqual(holdings["BETA.NS"]["trim_to_cap"], 15000)
+        self.assertEqual(holdings["GAMMA.NS"]["headroom_value"], 5000)
+        self.assertEqual(insights["breach_count"], 2)
+        self.assertEqual(portfolio_insights(profile(self.db, "demo_growth"))["breach_count"], 0)
 
 
 if __name__ == "__main__":

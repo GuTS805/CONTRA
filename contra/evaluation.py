@@ -14,24 +14,29 @@ HELDOUT_RETRIEVAL = Path(__file__).resolve().parent.parent / "data" / "fixtures"
 
 async def scenario_matrix(conservative: dict, growth: dict) -> dict:
     cases = [
-        ("market_document_conflict", "ALPHA.NS", conservative, "CONFLICTED", True),
-        ("same_market_growth_profile", "ALPHA.NS", growth, "CONFLICTED", False),
-        ("aligned_evidence", "GAMMA.NS", conservative, "ALIGNED", False),
-        ("missing_eligible_filing", "DELTA.NS", conservative, "PARTIAL", False),
+        ("market_document_conflict", "ALPHA.NS", conservative, "CONFLICTED", True, "REDUCE_EXPOSURE"),
+        ("same_market_growth_profile", "ALPHA.NS", growth, "CONFLICTED", False, "HOLD_REVIEW"),
+        ("aligned_evidence", "GAMMA.NS", conservative, "ALIGNED", False, "ELIGIBLE_TO_ADD"),
+        ("missing_eligible_filing", "DELTA.NS", conservative, "PARTIAL", False, "HOLD_REVIEW"),
     ]
-    reports = await asyncio.gather(*(analyze(ticker, investor, AS_OF, allow_llm=False) for _, ticker, investor, _, _ in cases))
+    reports = await asyncio.gather(*(analyze(case[1], case[2], AS_OF, allow_llm=False) for case in cases))
     rows = []
-    for (name, ticker, investor, expected_state, expected_breach), report in zip(cases, reports):
+    for (name, ticker, investor, expected_state, expected_breach, expected_action), report in zip(cases, reports):
         observed = report["synthesis"]
-        passed = observed["state"] == expected_state and observed["suitability_breach"] == expected_breach
+        action = report["recommendation"]["action"]
+        passed = observed["state"] == expected_state and observed["suitability_breach"] == expected_breach and \
+            action == expected_action
         rows.append({"name": name, "ticker": ticker, "investor_id": investor["id"],
                      "expected_state": expected_state, "observed_state": observed["state"],
+                     "expected_action": expected_action, "observed_action": action,
                      "expected_suitability_breach": expected_breach,
                      "observed_suitability_breach": observed["suitability_breach"], "passed": passed})
     same_market = reports[0]["market_snapshot_hash"] == reports[1]["market_snapshot_hash"]
     same_facts = reports[0]["signals"] == reports[1]["signals"]
     rows.append({"name": "profile_isolation", "ticker": "ALPHA.NS", "investor_id": "both",
                  "expected_state": "SAME_MARKET_DIFFERENT_SUITABILITY",
+                 "expected_action": "DIFFERENT_ACTION",
+                 "observed_action": "DIFFERENT_ACTION" if reports[0]["recommendation"]["action"] != reports[1]["recommendation"]["action"] else "SAME_ACTION",
                  "observed_state": "SAME_MARKET_DIFFERENT_SUITABILITY" if same_market and same_facts and reports[0]["synthesis"]["suitability_breach"] != reports[1]["synthesis"]["suitability_breach"] else "FAILED",
                  "passed": same_market and same_facts and reports[0]["synthesis"]["suitability_breach"] != reports[1]["synthesis"]["suitability_breach"]})
     # A small manually labeled fixture bundle, frozen separately from runtime ranking.

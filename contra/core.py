@@ -16,7 +16,7 @@ from collections import Counter
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, documents
 from . import llm
 
-METHOD_VERSION = "rules-1.1"
+METHOD_VERSION = "rules-1.2"
 _CLOCK_ANCHOR = datetime.now(timezone.utc)
 _MONOTONIC_ANCHOR = perf_counter_ns()
 
@@ -128,15 +128,29 @@ def numeric_signals(snapshot: dict) -> dict:
 
 
 RESEARCH_QUERY = "quarterly revenue operating margin costs cash debt contracts demand orders"
+FILING_MAX_AGE_DAYS = 180
+STOPWORDS = {"the", "and", "for", "with", "that", "this", "what", "which", "who", "how", "why", "when", "where",
+             "did", "does", "was", "were", "are", "has", "had", "have", "from", "into", "about", "any", "its",
+             "their", "there", "than", "then", "they", "say", "said", "tell", "show", "excerpt", "excerpts",
+             "filing", "filings", "company", "report", "reports", "reported", "during", "after", "while", "not"}
 
 
 def _terms(value: str) -> list[str]:
-    return re.findall(r"[a-z]{3,}", value.lower())
+    """Lowercase terms with stopwords removed and a plural suffix folded (orders -> order)."""
+    words = (word for word in re.findall(r"[a-z]{3,}", value.lower()) if word not in STOPWORDS)
+    return [word[:-1] if len(word) > 4 and word.endswith("s") and not word.endswith("ss") else word
+            for word in words]
 
 
-def retrieve(snapshot: dict, question: str = RESEARCH_QUERY, limit: int = 3) -> list[dict]:
+def _age_days(snapshot: dict, doc: dict) -> int:
+    return (date.fromisoformat(snapshot["as_of"]) - date.fromisoformat(doc["published_at"])).days
+
+
+def retrieve(snapshot: dict, question: str = RESEARCH_QUERY, limit: int = 3,
+             max_age_days: int | None = None) -> list[dict]:
     """Issuer and date gated TF-IDF cosine search over exact fixture passages."""
-    corpus = snapshot["documents"]
+    corpus = [doc for doc in snapshot["documents"]
+              if max_age_days is None or _age_days(snapshot, doc) <= max_age_days]
     if not corpus:
         return []
     counts = [Counter(_terms(doc["excerpt"])) for doc in corpus]
@@ -160,18 +174,41 @@ def retrieve(snapshot: dict, question: str = RESEARCH_QUERY, limit: int = 3) -> 
     return sorted(ranked, key=lambda d: (d["retrieval_score"], d["published_at"]), reverse=True)[:limit]
 
 
+def ask_filings(report: dict, question) -> dict:
+    """Extractive answer: ranked exact passages from the run's frozen, as-of eligible filings.
+
+    No text is generated; an unanswerable question returns no passages.
+    """
+    if not isinstance(question, str) or not 3 <= len(question.strip()) <= 300:
+        raise ValueError("Question must be 3-300 characters")
+    documents = (report.get("market_snapshot") or {}).get("documents")
+    if documents is None:
+        raise LookupError("This saved run predates frozen document storage")
+    snapshot = {"as_of": report["as_of"], "documents": documents}
+    terms = _terms(question)
+    passages = [{key: doc[key] for key in ("id", "document_id", "title", "published_at", "excerpt",
+                                          "source_hash", "retrieval_score")} | {"age_days": _age_days(snapshot, doc)}
+                for doc in retrieve(snapshot, question, limit=3)] if terms else []
+    return {"run_id": report["run_id"], "ticker": report["ticker"], "as_of": report["as_of"],
+            "question": question.strip(), "query_terms": terms, "passages": passages,
+            "searched_document_count": len(documents), "method": "tfidf-1.0 extractive retrieval",
+            "answer_status": "ANSWERED_FROM_SOURCES" if passages else "NO_SUPPORTING_PASSAGE",
+            "note": "Passages are exact stored text from filings published by the as-of date; nothing is generated."}
+
+
 def filing_signal(snapshot: dict, retrieved: list[dict]) -> dict:
     if not retrieved:
+        reason = (f"Filings exist, but none was published within {FILING_MAX_AGE_DAYS} days of the as-of date."
+                  if snapshot["documents"] else "No eligible filing excerpt existed by the as-of date.")
         return {"status": "UNAVAILABLE", "label": "UNKNOWN", "value": None, "evidence_confidence": None,
-                "evidence_ids": [], "reason": "No eligible filing excerpt existed by the as-of date."}
+                "evidence_ids": [], "reason": reason}
     # Fixture tone tags are attached to stored excerpts. No sentence is generated beyond cited facts.
     tone = sum(d["tone"] for d in retrieved) / len(retrieved)
     label = "POSITIVE" if tone > .2 else "NEGATIVE" if tone < -.2 else "MIXED"
     mixed = any(d["tone"] > 0 for d in retrieved) and any(d["tone"] < 0 for d in retrieved)
     if mixed and abs(tone) <= .2:
         label = "MIXED"
-    ages = [(date.fromisoformat(snapshot["as_of"]) - date.fromisoformat(d["published_at"])).days
-            for d in retrieved]
+    ages = [_age_days(snapshot, d) for d in retrieved]
     fresh = sum(max(0, 1 - age / 180) for age in ages) / len(ages)
     stale = any(age > 120 for age in ages)
     status = "PARTIAL" if all(age > 120 for age in ages) else "OK"
@@ -303,11 +340,160 @@ def synthesize(agents: dict, signals: dict) -> dict:
             "next_step": "Inspect the cited filings and portfolio limits before forming a view."}
 
 
+ACTIONS = {"REDUCE_EXPOSURE", "HOLD_REVIEW", "HOLD", "ELIGIBLE_TO_ADD", "AVOID_ADDING", "NO_VIEW"}
+
+
+def _sector_of(ticker: str) -> str:
+    return "Cash" if ticker == "CASH" else STOCKS[ticker]["sector"] if ticker in STOCKS else "Unclassified"
+
+
+def portfolio_insights(profile: dict) -> dict:
+    """Per-holding limit checks with the trim or headroom each configured cap implies.
+
+    Sizing assumes trims are held as cash, so the portfolio total stays constant.
+    """
+    positions = profile["positions"]
+    total = sum(p["value"] for p in positions)
+    cap, sector_cap = profile["max_single_asset_weight"], profile["max_sector_weight"]
+    if not total:
+        return {"profile_id": profile["id"], "revision": profile["revision"], "total_value": 0,
+                "holdings": [], "sectors": [], "breach_count": 0, "hhi": None,
+                "summary": "The portfolio has no valued holdings."}
+    sector_values = {}
+    for p in positions:
+        sector_values[_sector_of(p["ticker"])] = sector_values.get(_sector_of(p["ticker"]), 0) + p["value"]
+    sectors = []
+    for name, value in sorted(sector_values.items(), key=lambda item: -item[1]):
+        limited = name not in ("Cash", "Unclassified")
+        sectors.append({"sector": name, "value": value, "weight": round(value / total, 4),
+                        "cap": sector_cap if limited else None,
+                        "breach": limited and value > sector_cap * total,
+                        "excess_value": round(max(0, value - sector_cap * total), 2) if limited else 0})
+    holdings = []
+    for p in positions:
+        if p["ticker"] == "CASH":
+            continue
+        sector = _sector_of(p["ticker"])
+        excess = max(0, p["value"] - cap * total)
+        headroom = max(0, min(cap * total - p["value"], sector_cap * total - sector_values[sector]))
+        holdings.append({"ticker": p["ticker"], "sector": sector, "value": p["value"],
+                         "weight": round(p["value"] / total, 4), "cap": cap,
+                         "breach": p["value"] > cap * total, "trim_to_cap": round(excess, 2),
+                         "headroom_value": round(headroom, 2)})
+    breaches = sum(h["breach"] for h in holdings) + sum(s["breach"] for s in sectors)
+    hhi = sum((p["value"] / total) ** 2 for p in positions)
+    summary = ("All holdings are within this profile's configured limits." if not breaches else
+               f"{breaches} configured limit{'s are' if breaches > 1 else ' is'} exceeded; see the trims below.")
+    return {"profile_id": profile["id"], "revision": profile["revision"], "total_value": total,
+            "holdings": holdings, "sectors": sectors, "breach_count": breaches, "hhi": round(hhi, 4),
+            "summary": summary, "sizing_assumption": "Trims are held as cash, so the portfolio total is unchanged."}
+
+
+def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict) -> dict:
+    """Deterministic, explainable portfolio action for this investor.
+
+    The action comes from a fixed policy over the validated agent outputs and saved
+    profile. Every reason carries the source IDs that support it.
+    """
+    state = synthesis["state"]
+    market, research, risk = agents["market"], agents["research"], agents["risk"]
+    market_ids = market["evidence_ids"][:2]
+    research_ids = research["evidence_ids"][:3]
+    profile_ids = [profile["id"]]
+    reasons, would_change = [], []
+    sizing = None
+    if state == "INSUFFICIENT_EVIDENCE":
+        action, rule = "NO_VIEW", "Fewer than 21 valid dated bars: no market view is formed."
+        headline = "No view. There is not enough dated market history."
+        would_change.append("An as-of date with at least 21 valid trading sessions would allow a full analysis.")
+    elif risk["status"] != "OK" or risk.get("position_weight") is None:
+        action, rule = "NO_VIEW", "The portfolio valuation is incomplete, so suitability cannot be sized."
+        headline = "No view. The saved portfolio cannot be valued."
+        would_change.append("Entering a value for every holding would allow suitability sizing.")
+    else:
+        insight = portfolio_insights(profile)
+        total = insight["total_value"]
+        held = risk["position_weight"] * total
+        sector_value = risk["sector_weight"] * total
+        cap, sector_cap = risk["single_asset_cap"], risk["sector_cap"]
+        hold = f"Hold {ticker}" if held > 0 else f"Do not open a position in {ticker}"
+        if risk.get("breach"):
+            trim = min(held, max(held - cap * total, sector_value - sector_cap * total, 0))
+            action = "REDUCE_EXPOSURE"
+            rule = "A configured position or sector limit is breached, so the limit takes precedence over market signals."
+            headline = f"Reduce {ticker} by about {trim:,.0f} to bring it within this profile's limits."
+            sizing = {"current_value": round(held, 2), "current_weight": risk["position_weight"],
+                      "change_value": -round(trim, 2), "target_weight": round((held - trim) / total, 4),
+                      "portfolio_value": total, "assumption": insight["sizing_assumption"]}
+            if risk.get("single_asset_breach"):
+                reasons.append({"text": f"{ticker} is {risk['position_weight']:.0%} of the portfolio; the cap is {cap:.0%}.",
+                                "evidence_ids": profile_ids})
+                would_change.append(f"A single-name cap of at least {risk['position_weight']:.0%} would remove the size breach.")
+            if risk.get("sector_breach"):
+                reasons.append({"text": f"{risk['sector']} is {risk['sector_weight']:.0%} of the portfolio; the sector cap is {sector_cap:.0%}.",
+                                "evidence_ids": profile_ids})
+                would_change.append(f"A sector cap of at least {risk['sector_weight']:.0%} would remove the sector breach.")
+        elif state == "CONFLICTED":
+            action = "HOLD_REVIEW"
+            rule = "Price momentum and dated filing tone disagree, so no addition is suggested until it is resolved."
+            headline = (f"{hold} and do not add while price and filings disagree." if held > 0 else
+                        f"{hold} while price and filings disagree.")
+        elif state == "PARTIAL":
+            action = "HOLD_REVIEW"
+            rule = "At least one perspective is missing, so the evidence cannot support a change."
+            headline = f"{hold}. One perspective is missing, so evidence is incomplete."
+        elif state == "ALIGNED" and market["assessment"] == research["assessment"] == "BULLISH":
+            limit_room = max(0, min(cap * total - held, sector_cap * total - sector_value))
+            cash = sum(p["value"] for p in profile["positions"] if p["ticker"] == "CASH")
+            headroom = min(limit_room, cash)
+            action = "ELIGIBLE_TO_ADD" if headroom > 0 else "HOLD"
+            rule = "Price and filings agree on a positive view and the position is below its limits."
+            headline = (f"Eligible to add up to about {headroom:,.0f} to {ticker} within this profile's limits."
+                        if headroom > 0 else
+                        f"{hold}. The evidence is positive, but the position is already at its limit." if not limit_room else
+                        f"{hold}. The evidence is positive, but there is no cash to fund an addition.")
+            sizing = {"current_value": round(held, 2), "current_weight": risk["position_weight"],
+                      "change_value": round(headroom, 2), "target_weight": round((held + headroom) / total, 4),
+                      "portfolio_value": total, "available_cash": cash,
+                      "assumption": "Additions are funded from cash, so the portfolio total is unchanged."}
+            would_change.append("Momentum falling below +3% or a negative dated filing would end the alignment.")
+        elif state == "ALIGNED" and market["assessment"] == research["assessment"] == "BEARISH":
+            action = "AVOID_ADDING"
+            rule = "Price and filings agree on a negative view."
+            headline = f"Avoid adding to {ticker}. Price and filings are both negative."
+            would_change.append("Momentum above -3% or a positive dated filing would end the negative alignment.")
+        else:
+            action = "HOLD"
+            rule = "The evidence is mixed or neutral and no limit is breached."
+            headline = f"{hold}. The evidence does not point clearly in either direction."
+            would_change.append("Price momentum and filing tone both turning clearly positive or negative would allow a directional view.")
+        if state == "CONFLICTED":
+            reasons.append({"text": f"Price momentum is {market['assessment'].lower()} while dated filing tone is {research['assessment'].lower()}.",
+                            "evidence_ids": market_ids + research_ids})
+            would_change.append("Filing tone and price momentum pointing the same way would remove the disagreement.")
+        if research["status"] != "OK":
+            reasons.append({"text": "No eligible filing supports a research view at this as-of date.", "evidence_ids": []})
+            would_change.append(f"A filing published within {FILING_MAX_AGE_DAYS} days before the as-of date would allow a research view.")
+        if research["assessment"] == "MIXED":
+            reasons.append({"text": "The cited filing excerpts are mixed.", "evidence_ids": research_ids})
+        if state == "ALIGNED":
+            reasons.append({"text": f"Price momentum and filing tone are both {market['assessment'].lower()}.",
+                            "evidence_ids": market_ids + research_ids})
+        if not risk.get("breach"):
+            reasons.append({"text": f"{ticker} is {risk['position_weight']:.0%} of the portfolio, within the {cap:.0%} cap; "
+                                    f"{risk['sector']} is {risk['sector_weight']:.0%}, within the {sector_cap:.0%} sector cap.",
+                            "evidence_ids": profile_ids})
+    return {"action": action, "headline": headline, "rule": rule, "reasons": reasons, "sizing": sizing,
+            "would_change": list(dict.fromkeys(would_change)),
+            "evidence_completeness": synthesis["evidence_completeness"], "policy_version": METHOD_VERSION,
+            "basis": "Deterministic policy over cited evidence and this saved profile. It is not personalized financial advice."}
+
+
 async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: bool = True) -> dict:
     wall_start = perf_counter()
     snapshot = prepare(ticker, as_of)
     numeric = numeric_signals(snapshot)
-    retrieved = retrieve(snapshot)
+    retrieved = retrieve(snapshot, max_age_days=FILING_MAX_AGE_DAYS)
     signals = {**numeric, "filing_tone": filing_signal(snapshot, retrieved)}
     start_gate = Barrier(3)
     def parallel(work):
@@ -346,6 +532,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             elif agent["status"] == "OK":
                 agent["status"] = "PARTIAL"
     synthesis = synthesize(agents, signals)
+    recommendation = recommend(ticker, profile, agents, synthesis)
     cited = list(dict.fromkeys(x for a in agents.values() for x in a["evidence_ids"] if x.startswith("E-")))
     evidence = [d for d in retrieved if d["id"] in cited]
     run_id = "run_" + uuid.uuid4().hex[:12]
@@ -359,7 +546,8 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             "market_snapshot": {"bars": snapshot["bars"], "documents": snapshot["documents"],
                                 "document_ids": [d["id"] for d in snapshot["documents"]]},
             "investor_snapshot": profile,
-            "signals": signals, "agents": agents, "synthesis": synthesis, "evidence": evidence,
+            "signals": signals, "agents": agents, "synthesis": synthesis, "recommendation": recommendation,
+            "evidence": evidence,
             "metrics": {"wall_latency_ms": wall_ms,
                         "citation_validity": round((len(raw_research_citations) - invalid_research_citations) / len(raw_research_citations), 3) if raw_research_citations else None,
                         "citation_count": len(cited), "citation_fabrication_count": invalid_research_citations,

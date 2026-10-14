@@ -26,7 +26,7 @@ def verify_run(report):
     expected = report.get("report_hash")
     if expected is not None and expected != digest({key: value for key, value in report.items() if key != "report_hash"}):
         raise RunIntegrityError("Saved report checksum does not match its contents")
-    if expected is not None or report.get("method_version") == "rules-1.1":
+    if expected is not None or str(report.get("method_version", "")).startswith("rules-"):
         market = report.get("market_snapshot", {})
         snapshot_hash = digest({"dataset": report.get("dataset_id"), "ticker": report.get("ticker"),
                                 "as_of": report.get("as_of"), "bars": market.get("bars"),
