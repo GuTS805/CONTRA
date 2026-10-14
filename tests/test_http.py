@@ -1,5 +1,6 @@
 """Real local HTTP lifecycle checks against an isolated temporary database."""
 import json
+import http.client
 import os
 import socket
 import subprocess
@@ -119,6 +120,14 @@ class HttpTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as raised:
             self.request_json("/v1/analyses/not-a-run/extra")
         self.assertEqual(raised.exception.code, 404)
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        try:
+            connection.request("POST", "/v1/analyses", body=b"", headers={"Content-Length": "-1"})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertEqual(json.load(response)["error"], "BAD_INPUT")
+        finally:
+            connection.close()
 
 
 if __name__ == "__main__":

@@ -32,6 +32,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _json(self):
         size = int(self.headers.get("Content-Length", "0"))
+        if size < 0:
+            raise ValueError("Invalid Content-Length")
         if size > 100_000:
             raise ValueError("Request body too large")
         def reject_constant(value):
