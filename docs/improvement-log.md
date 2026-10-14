@@ -42,3 +42,43 @@ Scope: the supplied architecture blueprint and the current synthetic, localhost 
 1. **P1 for real-world use — data and provenance:** `contra/fixtures.py`, `contra/core.py`, `contra/import_data.py`. Imported snapshots are validated and staged, but analysis still uses synthetic fixtures. Licensed feeds, issuer filing verification and a trustworthy interpretation method are not implemented.
 2. **P1 for public use — identity and deployment:** `contra/server.py`, `contra/store.py`. The server is intentionally local and unauthenticated. Hosted access requires an identity model, access controls and durable storage.
 3. **P2 — broader client verification:** `web/app.js`, `web/style.css`. The current smoke harness covers main page rendering and three navigation races. A full browser journey across the report, portfolio edit and error states would give stronger confidence.
+
+## 15 October 2026 — problem statement alignment
+
+Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at least three parallel agents, financial document RAG, personalized portfolio insights and explainable recommendations. These scores are reviewer judgments against that statement.
+
+| Category | Before | After | Evidence |
+| --- | ---: | ---: | --- |
+| Problem–solution fit | 5 | 8 | Each report now ends in a sized, cited, personalized action; filings can be questioned; holdings get limit insights. |
+| Innovation | 6 | 7 | The same frozen market produces different, explained actions per investor, with counterfactuals. |
+| Technical execution | 7 | 8 | Retrieval bugs fixed; 33 Python tests and the extended UI smoke test pass. |
+| UI/UX | 7 | 8 | Action card, Ask the filings and insights table inspected at 1440 px and at 390 px using DevTools device emulation. |
+| Functional completeness | 5 | 8 | All four statement requirements have a working, tested path. |
+| Reliability | 8 | 8 | New routes validate input and return typed 400/404/409 errors. |
+| Security | 6 | 6 | Unchanged local-only boundary; the new routes are read-only GET requests. |
+| Demo impact | 6 | 8 | The scenario cards, demo script and evaluation matrix now show the action. |
+
+### Cycle 5: explainable personalized action (P1)
+
+- **Problem:** the statement asks for explainable recommendations, but a report ended at a state label without saying what this investor should do.
+- **Change (`contra/core.py` `recommend`):** the change adds a deterministic priority policy over validated agent outputs and the saved profile. Every report records the action, the rule that fired, cited reasons, sizing (trim to restore the larger breached limit, or room to add bounded by caps and cash), and what would change the action. The report checksum covers this output. Older runs show a notice instead.
+- **Verification:** tests cover all actions, the sector-trim arithmetic, the cash bound and the wording for unheld stocks. The scenario matrix now also checks the expected action.
+
+### Cycle 6: filing question answering (P1)
+
+- **Change:** `GET /v1/analyses/{run_id}/ask?q=` searches only that run's frozen, as-of eligible filings. It returns exact passages with age and relevance, or `NO_SUPPORTING_PASSAGE`. The report page adds the Ask panel with suggested questions.
+
+### Cycle 7: retrieval correctness (P2)
+
+- **Problem:** stopwords such as "the" matched unrelated passages. Query plurals did not match singular filing words, so the positive ALPHA.NS contract excerpt was never retrieved. A 220-day-old excerpt drove current filing tone.
+- **Change:** stopword removal, plural folding, and a 180-day window for the tone signal. ALPHA.NS still resolves to NEGATIVE / CONFLICTED, now from three recent excerpts.
+
+### Cycle 8: portfolio insights and integrity coverage
+
+- `GET /v1/profiles/{id}/insights` and the Portfolio page now show weight against cap, the trim that would restore a breached cap, and room to add for each holding.
+- `verify_run` checked frozen snapshot hashes only for `rules-1.1`. It now checks every versioned `rules-*` run, so the new version cannot skip the check.
+
+### Remaining gaps
+
+- The LLM adapter is still unverified against a live key. All agent reasoning runs in labeled deterministic fallback here.
+- The data is synthetic, and the analysis API accepts only the built-in dataset.

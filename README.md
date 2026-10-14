@@ -24,14 +24,15 @@ Implementation notes: [architecture](docs/architecture.md) · [five-minute demo]
 
 ## Demo
 
-1. Select **ALPHA.NS** and **Conservative**, then run analysis. Price momentum is positive while a cited filing is negative; the 15% position also exceeds the 10% cap.
-2. Select **Growth** and run the same stock and date. Market facts and snapshot hash stay equal while the 30% cap changes suitability.
-3. Select **GAMMA.NS** to see aligned positive evidence. Select **DELTA.NS** to see a missing-filing partial result.
-4. Open cited excerpts and market bars from the signal cards. The report includes a chart computed from its frozen simulated closes.
-5. Use **Compare** to see both investor outcomes side by side against the same market snapshot. Refresh a saved run URL to verify persistence.
-6. Reopen a report from **Recent analyses**. Open Evaluation to execute the synthetic scenario matrix, inspect citation validity and Recall@3, then run the 10-execution latency benchmark.
+1. Select **ALPHA.NS** and **Conservative**, then run analysis. Price momentum is positive while cited filings are negative; the 15% position also exceeds the 10% cap. The personalized action says **Reduce exposure** by about 5,000 (15% → 10%), lists the cited reasons, and states what would change the action.
+2. Select **Growth** and run the same stock and date. Market facts and snapshot hash stay equal while the 30% cap changes the action to **Hold · review**.
+3. In **Ask the filings**, ask "Any new contracts or orders?". The answer is the exact cited excerpt; a question no filing supports returns no passage instead of a guess.
+4. Select **GAMMA.NS** to see aligned positive evidence and a sized room to add. Select **DELTA.NS** to see a missing-filing partial result.
+5. Open cited excerpts and market bars from the signal cards. The report includes a chart computed from its frozen simulated closes.
+6. Use **Compare** to see both investor outcomes side by side against the same market snapshot. Refresh a saved run URL to verify persistence.
+7. Reopen a report from **Recent analyses**. Open Evaluation to execute the synthetic scenario matrix, inspect citation validity and Recall@3, then run the 10-execution latency benchmark.
 
-On the Portfolio page, edit synthetic holding values or risk limits to create a new profile revision. New analyses use the updated profile; saved runs retain their original portfolio snapshot.
+The Portfolio page lists personalized insights for every holding: weight against the cap, the trim that would restore a breached limit, or the room left to add. Edit synthetic holding values or risk limits to create a new profile revision. New analyses use the updated profile; saved runs retain their original portfolio snapshot.
 
 The terminal also accepts an as-of date within the fixture range. Choosing an early date with fewer than 21 bars produces `INSUFFICIENT_EVIDENCE`; future-dated documents never enter that run.
 
@@ -41,9 +42,9 @@ To enable model reasoning, set `CONTRA_LLM=1` and a valid `OPENAI_API_KEY` in th
 
 ## API
 
-`GET /health`, `/v1/stocks`, `/v1/profiles`, `/v1/profiles/{id}/portfolio`, `/v1/analyses`, `/v1/analyses/{run_id}`, `/v1/analyses/{run_id}/evidence/{id}`, `/v1/evidence` (optional `ticker` and `as_of` filters), `/v1/evidence/{id}`, `/v1/evaluations/summary`, `/v1/evaluations/benchmark`; `POST /v1/analyses`; `PUT /v1/profiles/{id}`. The run-scoped evidence route opens the exact frozen source used in that analysis. JSON errors have an `error` code and `message`.
+`GET /health`, `/v1/stocks`, `/v1/profiles`, `/v1/profiles/{id}/portfolio`, `/v1/profiles/{id}/insights`, `/v1/analyses`, `/v1/analyses/{run_id}`, `/v1/analyses/{run_id}/evidence/{id}`, `/v1/analyses/{run_id}/ask?q=` (3–300 characters), `/v1/evidence` (optional `ticker` and `as_of` filters), `/v1/evidence/{id}`, `/v1/evaluations/summary`, `/v1/evaluations/benchmark`; `POST /v1/analyses`; `PUT /v1/profiles/{id}`. The run-scoped evidence route opens the exact frozen source used in that analysis. JSON errors have an `error` code and `message`.
 
-An analysis POST accepts `ticker`, `investor_id`, `dataset_id` (optional, fixed to `contra_synthetic_v1`), and `as_of` (optional, the fixture end date). The response includes frozen market bars and eligible document text, a separate investor snapshot, both hashes, three signals, three timed agent results, synthesis, cited evidence, and measured metrics.
+An analysis POST accepts `ticker`, `investor_id`, `dataset_id` (optional, fixed to `contra_synthetic_v1`), and `as_of` (optional, the fixture end date). The response includes frozen market bars and eligible document text, a separate investor snapshot, both hashes, three signals, three timed agent results, synthesis, a personalized `recommendation` (action, headline, rule, cited reasons, sizing, and what would change it), cited evidence, and measured metrics. The ask route searches only the run's frozen filings published by its as-of date and returns exact passages or `NO_SUPPORTING_PASSAGE`.
 
 The saved-run list accepts `investor_id`, `limit` (1–100; default 20), and `offset`. It returns `total` and `has_more`, and the terminal can load older reports in pages of ten.
 

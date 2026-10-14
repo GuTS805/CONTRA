@@ -15,6 +15,9 @@ The supplied blueprint is the target specification. This table records what the 
 | T09 — Short/invalid bars | Fewer than 21 bars, zero or non-finite volume cannot produce a numeric signal. | Local pass |
 | T10 — Future filing excluded | As-of filter excludes all future-dated DELTA.NS excerpts. | Local pass |
 | T11 — Invalid identifiers | HTTP API returns typed 400/404 errors; stale profile revision returns 409. | Local pass |
+| T13 — Explainable personalized action | Same ALPHA.NS market gives Reduce exposure (−5,000 to the 10% cap) for Conservative and Hold · review for Growth; every reason carries source IDs; additions are bounded by caps and available cash. | Local pass |
+| T14 — Filing question answering | Ask route returns exact stored passages from as-of eligible filings, abstains on unsupported questions, and never searches future filings. | Local pass |
+| T15 — Portfolio insights | Per-holding cap checks with trim-to-cap and room-to-add values for each saved profile. | Local pass |
 | T12 — Production inspection | Static UI escapes inserted data and the key stays server-side. No hosted production page or deployment smoke test exists. | Pending hosted deployment |
 
 ## Remaining blueprint work

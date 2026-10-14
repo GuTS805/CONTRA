@@ -45,9 +45,11 @@ flowchart LR
 | Filing tone | Mean of stored synthetic fact-tone tags from the top three eligible TF-IDF passages; positive above +0.2, negative below -0.2, otherwise mixed. Contradictory tags near zero are mixed. |
 | Freshness | Bar freshness is full for up to three calendar days, then declines over 30 days. Filing freshness averages `max(0, 1 - age_days / 180)` over retrieved excerpts; any cited excerpt older than 120 days gets a warning. |
 | Evidence confidence | `0.35 coverage + 0.30 freshness + 0.20 threshold_margin + 0.15 source_quality`, each component clamped to `[0,1]`. This is a heuristic strength of observed support, not return accuracy or a profit probability. |
+| Filing retrieval | Stopwords are removed and a plural suffix is folded (orders → order). The tone signal uses only excerpts published within 180 days of the as-of date; older ones stay searchable through Ask the filings and are labeled by age. |
+| Portfolio action | A fixed priority policy: insufficient history or valuation → No view; any breached cap → Reduce exposure, trimmed by the larger of the single-name and sector excess (trims held as cash); conflicted or partial evidence → Hold · review (or do not open a position if unheld); aligned bullish → Eligible to add, bounded by both caps and available cash; aligned bearish → Avoid adding; otherwise Hold. Each reason carries source IDs, and the result lists the inputs that would change the action. |
 | Suitability | Current position and sector weights are compared with the saved investor's configured caps. ALPHA.NS and BETA.NS share the synthetic Technology sector, so their weights aggregate. A breach changes the personal caution state, never the market snapshot or raw signals. |
 
-The implementation version saved with new runs is `rules-1.1`; lexical retrieval is `tfidf-1.0`. These thresholds are design choices for a synthetic demo, not calibrated market predictors.
+The implementation version saved with new runs is `rules-1.2` (`rules-1.1` runs remain verifiable); lexical retrieval is `tfidf-1.0`. These thresholds are design choices for a synthetic demo, not calibrated market predictors.
 
 ## Measurement
 
