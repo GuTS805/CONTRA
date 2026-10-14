@@ -14,7 +14,7 @@ from .core import analyze, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
 from .llm import configured as llm_configured
-from .store import RevisionConflict, baseline_profiles, connect, profiles, profile, update_profile, save_run, run, all_runs
+from .store import RunIntegrityError, RevisionConflict, baseline_profiles, connect, profiles, profile, update_profile, save_run, run, all_runs
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -48,6 +48,12 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, {"error": code, "message": message})
 
     def do_GET(self):
+        try:
+            return self._do_GET()
+        except RunIntegrityError as exc:
+            return self._error(500, "DATA_INTEGRITY", str(exc))
+
+    def _do_GET(self):
         path = unquote(urlparse(self.path).path)
         if path == "/health":
             with connect() as db:

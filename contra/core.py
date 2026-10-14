@@ -350,7 +350,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     evidence = [d for d in retrieved if d["id"] in cited]
     run_id = "run_" + uuid.uuid4().hex[:12]
     wall_ms = round((perf_counter() - wall_start) * 1000, 2)
-    return {"run_id": run_id, "status": "COMPLETE" if synthesis["state"] not in ("PARTIAL", "INSUFFICIENT_EVIDENCE") else "PARTIAL",
+    report = {"run_id": run_id, "status": "COMPLETE" if synthesis["state"] not in ("PARTIAL", "INSUFFICIENT_EVIDENCE") else "PARTIAL",
             "created_at": stamp(), "ticker": ticker, "investor_id": profile["id"], "profile_revision": profile["revision"],
             "dataset_id": DATASET_ID, "as_of": as_of, "data_mode": "SYNTHETIC",
             "method_version": METHOD_VERSION, "retrieval_method_version": "tfidf-1.0",
@@ -365,3 +365,5 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
                         "citation_count": len(cited), "citation_fabrication_count": invalid_research_citations,
                         "portfolio_concentration": agents["risk"].get("position_weight"),
                         "agent_overlap": max(a["started_at"] for a in agents.values()) < min(a["finished_at"] for a in agents.values())}}
+    report["report_hash"] = digest(report)
+    return report

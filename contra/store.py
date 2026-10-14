@@ -9,12 +9,31 @@ from pathlib import Path
 import sqlite3
 
 from .fixtures import STOCKS
+from .core import digest
 
 DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "contra.sqlite3"
 
 
 class RevisionConflict(Exception):
     """The caller edited an out-of-date investor profile."""
+
+
+class RunIntegrityError(Exception):
+    """A stored report no longer matches its creation-time checksum."""
+
+
+def verify_run(report):
+    expected = report.get("report_hash")
+    if expected is not None and expected != digest({key: value for key, value in report.items() if key != "report_hash"}):
+        raise RunIntegrityError("Saved report checksum does not match its contents")
+    market = report.get("market_snapshot", {})
+    snapshot_hash = digest({"dataset": report.get("dataset_id"), "ticker": report.get("ticker"),
+                            "as_of": report.get("as_of"), "bars": market.get("bars"),
+                            "documents": market.get("documents")})
+    if snapshot_hash != report.get("market_snapshot_hash") or \
+            digest({"snapshot": snapshot_hash, "profile": report.get("investor_snapshot")}) != report.get("run_context_hash"):
+        raise RunIntegrityError("Saved market or investor snapshot checksum does not match")
+    return report
 
 
 def connect(path: str | Path | None = None) -> sqlite3.Connection:
@@ -115,6 +134,7 @@ def update_profile(db, ident, changes):
 
 
 def save_run(db, report):
+    verify_run(report)
     with db:
         db.execute("INSERT INTO runs(id,investor_id,ticker,created_at,payload) VALUES (?,?,?,?,?)",
                    (report["run_id"], report["investor_id"], report["ticker"], report["created_at"], json.dumps(report, allow_nan=False)))
@@ -122,8 +142,8 @@ def save_run(db, report):
 
 def run(db, ident):
     row = db.execute("SELECT payload FROM runs WHERE id=?", (ident,)).fetchone()
-    return json.loads(row[0]) if row else None
+    return verify_run(json.loads(row[0])) if row else None
 
 
 def all_runs(db):
-    return [json.loads(row[0]) for row in db.execute("SELECT payload FROM runs ORDER BY created_at DESC")]
+    return [verify_run(json.loads(row[0])) for row in db.execute("SELECT payload FROM runs ORDER BY created_at DESC")]

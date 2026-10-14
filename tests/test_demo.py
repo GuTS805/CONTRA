@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 from datetime import date
 import tempfile
 import unittest
@@ -7,7 +8,7 @@ from unittest.mock import patch
 from contra.core import analyze, prepare, numeric_signals, retrieve
 from contra.evaluation import scenario_matrix
 from contra.fixtures import AS_OF, documents
-from contra.store import connect, profile, save_run, run, update_profile
+from contra.store import RunIntegrityError, connect, profile, save_run, run, update_profile, verify_run
 
 
 class DemoTests(unittest.TestCase):
@@ -193,6 +194,14 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(market["status"], "PARTIAL")
         self.assertNotIn(unrelated_bar, market["evidence_ids"])
         self.assertTrue(all(unrelated_bar not in fact["source_ids"] for fact in market["facts"]))
+
+    def test_legacy_report_replays_but_changed_frozen_input_fails_integrity(self):
+        legacy = deepcopy(self.analyze("GAMMA.NS"))
+        del legacy["report_hash"]
+        self.assertIs(verify_run(legacy), legacy)
+        legacy["market_snapshot"]["bars"][0]["close"] += 1
+        with self.assertRaises(RunIntegrityError):
+            verify_run(legacy)
 
 
 if __name__ == "__main__":

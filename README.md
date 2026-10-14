@@ -43,7 +43,7 @@ To enable model reasoning, set `CONTRA_LLM=1` and a valid `OPENAI_API_KEY` in th
 
 An analysis POST accepts `ticker`, `investor_id`, `dataset_id` (optional, fixed to `contra_synthetic_v1`), and `as_of` (optional, the fixture end date). The response includes frozen market bars and eligible document text, a separate investor snapshot, both hashes, three signals, three timed agent results, synthesis, cited evidence, and measured metrics.
 
-Profile updates may include `expected_revision`. A stale revision returns HTTP 409, so one investor's changes cannot silently overwrite a newer edit.
+Profile updates may include `expected_revision`. A stale revision returns HTTP 409, so one investor's changes cannot silently overwrite a newer edit. New saved runs include a complete report checksum; replay verifies that checksum and the frozen input hashes. Pre-checksum runs remain readable with an `UNVERIFIED LEGACY` label.
 
 ## Verify
 

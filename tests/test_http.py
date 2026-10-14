@@ -1,8 +1,10 @@
 """Real local HTTP lifecycle checks against an isolated temporary database."""
 import json
+from contextlib import closing
 import http.client
 import os
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -62,6 +64,7 @@ class HttpTests(unittest.TestCase):
         status, report = self.request_json("/v1/analyses", "POST",
                                            {"ticker": "ALPHA.NS", "investor_id": "demo_conservative"})
         self.assertEqual(status, 201)
+        self.assertTrue(report["report_hash"].startswith("sha256:"))
         self.assertEqual(report["synthesis"]["state"], "CONFLICTED")
         self.assertTrue(report["metrics"]["agent_overlap"])
         self.assertGreater(len(report["market_snapshot"]["bars"]), 21)
@@ -131,6 +134,25 @@ class HttpTests(unittest.TestCase):
             self.assertEqual(json.load(response)["error"], "BAD_INPUT")
         finally:
             connection.close()
+
+    def test_saved_report_corruption_is_detected_on_replay(self):
+        _, report = self.request_json("/v1/analyses", "POST",
+                                      {"ticker": "GAMMA.NS", "investor_id": "demo_growth"})
+        db_path = os.path.join(self.tmp.name, "http.sqlite3")
+        with closing(sqlite3.connect(db_path)) as db, db:
+            original = db.execute("SELECT payload FROM runs WHERE id=?", (report["run_id"],)).fetchone()[0]
+            changed = json.loads(original)
+            changed["synthesis"]["next_step"] = "Corrupted content"
+            db.execute("UPDATE runs SET payload=? WHERE id=?", (json.dumps(changed), report["run_id"]))
+        try:
+            with self.assertRaises(HTTPError) as raised:
+                self.request_json("/v1/analyses/" + report["run_id"])
+            self.assertEqual(raised.exception.code, 500)
+            with raised.exception as response:
+                self.assertEqual(json.load(response)["error"], "DATA_INTEGRITY")
+        finally:
+            with closing(sqlite3.connect(db_path)) as db, db:
+                db.execute("UPDATE runs SET payload=? WHERE id=?", (original, report["run_id"]))
 
 
 if __name__ == "__main__":
