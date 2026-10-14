@@ -313,7 +313,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     def parallel(work):
         start_gate.wait(timeout=1)
         return work()
-    allowed_by_agent = {"market": {bar["id"] for bar in snapshot["bars"]},
+    allowed_by_agent = {"market": set(numeric["momentum"]["evidence_ids"] + numeric["volume"]["evidence_ids"]),
                         "research": {doc["id"] for doc in retrieved}, "risk": {profile["id"]}}
     tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"]),
              timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"]),

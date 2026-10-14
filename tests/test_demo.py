@@ -178,6 +178,22 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["metrics"]["citation_fabrication_count"], 1)
         self.assertNotIn("RESEARCH", [call.args[0] for call in model_reason.call_args_list])
 
+    def test_unrelated_frozen_bar_cannot_support_market_signal(self):
+        from contra.core import market_agent as real_market_agent
+        from contra.fixtures import bars_for
+        unrelated_bar = bars_for("ALPHA.NS")[0]["id"]
+        def invalid_market(signals):
+            result = real_market_agent(signals)
+            result["evidence_ids"].append(unrelated_bar)
+            result["facts"].append({"key": "unrelated_bar", "value": 1, "source_ids": [unrelated_bar]})
+            return result
+        with patch("contra.core.market_agent", side_effect=invalid_market):
+            report = self.analyze("ALPHA.NS")
+        market = report["agents"]["market"]
+        self.assertEqual(market["status"], "PARTIAL")
+        self.assertNotIn(unrelated_bar, market["evidence_ids"])
+        self.assertTrue(all(unrelated_bar not in fact["source_ids"] for fact in market["facts"]))
+
 
 if __name__ == "__main__":
     unittest.main()
