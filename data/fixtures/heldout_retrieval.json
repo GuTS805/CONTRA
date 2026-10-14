@@ -1,0 +1,21 @@
+{
+  "dataset_id": "contra_synthetic_v1",
+  "description": "Manually labeled synthetic retrieval queries kept separate from the runtime research question.",
+  "cases": [
+    {
+      "ticker": "ALPHA.NS",
+      "question": "Which excerpt reports operating margin pressure and component costs?",
+      "expected_ids": ["E-ALPHA-01"]
+    },
+    {
+      "ticker": "GAMMA.NS",
+      "question": "Which excerpt reports operating cash flow and lower net debt?",
+      "expected_ids": ["E-GAMMA-03"]
+    },
+    {
+      "ticker": "BETA.NS",
+      "question": "Which excerpt discusses mixed regional demand and cash balances?",
+      "expected_ids": ["E-BETA-04"]
+    }
+  ]
+}

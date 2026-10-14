@@ -10,6 +10,7 @@ vm.createContext(context);
 let source=fs.readFileSync('web/app.js','utf8');
 source=source.replace('window.onpopstate=render;render();','window.onpopstate=render;');
 vm.runInContext(source,context);
+assert.equal(vm.runInContext("esc('<script>')",context),'&lt;script&gt;');
 async function analysis(investor){const response=await fetch(base+'/v1/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:'ALPHA.NS',investor_id:investor})});assert.equal(response.status,201);return response.json()}
 (async()=>{
  await vm.runInContext('render()',context);

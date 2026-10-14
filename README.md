@@ -12,6 +12,14 @@ python -m contra.server
 
 Open <http://localhost:8000>. The SQLite database is created at `data/contra.sqlite3` on first run. `CONTRA_DB` can point to a different database path.
 
+On Windows, the background starter checks health before launching a hidden server. This machine blocks direct PowerShell scripts by default, so run it with a process-scoped policy override:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
+```
+
+It prints the URL and writes logs under `data/`.
+
 Implementation notes: [architecture](docs/architecture.md) · [five-minute demo](docs/demo.md) · [acceptance status](docs/acceptance.md).
 
 ## Demo
@@ -55,6 +63,6 @@ On this Windows machine, VS Code's bundled Node runtime can run the same script 
 
 ## Scope
 
-This is an offline-capable MVP. It has four synthetic stocks, generated dated bars, 16 synthetic filing excerpts, two stored investor profiles, a local SQLite audit log, issuer/date filtered TF-IDF retrieval, and a measured evaluation view. The fixture corpus is deliberately small; it is not a production financial RAG system. There is no live feed, brokerage connection, trade action or hosted deployment. Model calls are optional and remain unverified against a live account in this workspace. The synthetic scenario checks shown in Evaluation measure fixture behavior, not market prediction accuracy.
+This is an offline-capable MVP. It has four synthetic stocks, generated dated bars, 16 synthetic filing excerpts, two stored investor profiles, a local SQLite audit log, issuer/date filtered TF-IDF retrieval, a separate labeled retrieval bundle, and a measured evaluation view. The fixture corpus is deliberately small; it is not a production financial RAG system. There is no live feed, brokerage connection, trade action or hosted deployment. Model calls are optional and remain unverified against a live account in this workspace. The synthetic scenario checks shown in Evaluation measure fixture behavior, not market prediction accuracy.
 
 For a clean restart, stop the Python process serving port 8000, then run `python -m contra.server` again. The browser URL only works while the process is running. Runtime databases and logs under `data/` are ignored by Git.

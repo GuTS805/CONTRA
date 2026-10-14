@@ -77,6 +77,8 @@ def update_profile(db, ident, changes):
         if expected_revision != current["revision"]:
             raise RevisionConflict("Profile changed since it was loaded; reload before saving")
     changes = {key: value for key, value in changes.items() if key != "expected_revision"}
+    if not changes:
+        raise ValueError("At least one profile field must be supplied")
     allowed = {"display_name", "risk_tier", "max_single_asset_weight", "max_sector_weight", "investment_horizon", "positions", "watchlist"}
     if set(changes) - allowed:
         raise ValueError("Unknown or invalid profile fields")
@@ -91,11 +93,12 @@ def update_profile(db, ident, changes):
             len(updated["watchlist"]) != len(set(updated["watchlist"])):
         raise ValueError("watchlist must contain unique known synthetic tickers")
     for field in ("max_single_asset_weight", "max_sector_weight"):
-        if isinstance(updated[field], bool) or not isinstance(updated[field], (float, int)) or not math.isfinite(updated[field]) or not 0 < updated[field] <= 1:
+        if isinstance(updated[field], bool) or not isinstance(updated[field], (float, int)) or not 0 < updated[field] <= 1 or not math.isfinite(updated[field]):
             raise ValueError(f"{field} must be a fraction in (0,1]")
     if not isinstance(updated["positions"], list) or any(not isinstance(p, dict) or isinstance(p.get("value"), bool) or
-            not isinstance(p.get("value"), (int, float)) or not math.isfinite(p["value"]) or
-            p["value"] < 0 or not isinstance(p.get("ticker"), str) or
+            not isinstance(p.get("value"), (int, float)) or p["value"] < 0 or
+            p["value"] > 1_000_000_000_000 or not math.isfinite(p["value"]) or
+            not isinstance(p.get("ticker"), str) or
             p["ticker"] not in STOCKS and p["ticker"] != "CASH" for p in updated["positions"]):
         raise ValueError("positions must contain nonnegative valued assets")
     if len({p["ticker"] for p in updated["positions"]}) != len(updated["positions"]):

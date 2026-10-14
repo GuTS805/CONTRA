@@ -36,9 +36,22 @@ flowchart LR
 - A source published after `as_of` cannot enter retrieval. A missing eligible excerpt produces `UNAVAILABLE` research and a `PARTIAL` report.
 - The run-scoped evidence endpoint opens the exact bar, cited excerpt or investor profile revision frozen into that report. The general evidence endpoint opens the current synthetic fixture library. No result claims to be a live NSE quote or issuer filing.
 
+## Configured descriptive rules
+
+| Dimension | Rule in this local MVP |
+| --- | --- |
+| Momentum | `close[t] / close[t-20] - 1`; bullish above +3%, bearish below -3%, otherwise neutral. Requires 21 valid dated bars. |
+| Volume | Latest volume divided by the median of the previous 20 sessions; elevated above 1.5x, suppressed below 0.7x. Volume does not assign price direction. |
+| Filing tone | Mean of stored synthetic fact-tone tags from the top three eligible TF-IDF passages; positive above +0.2, negative below -0.2, otherwise mixed. Contradictory tags near zero are mixed. |
+| Freshness | Bar freshness is full for up to three calendar days, then declines over 30 days. Filing freshness averages `max(0, 1 - age_days / 180)` over retrieved excerpts; any cited excerpt older than 120 days gets a warning. |
+| Evidence confidence | `0.35 coverage + 0.30 freshness + 0.20 threshold_margin + 0.15 source_quality`, each component clamped to `[0,1]`. This is a heuristic strength of observed support, not return accuracy or a profit probability. |
+| Suitability | Current position and sector weights are compared with the saved investor's configured caps. ALPHA.NS and BETA.NS share the synthetic Technology sector, so their weights aggregate. A breach changes the personal caution state, never the market snapshot or raw signals. |
+
+The implementation version saved with new runs is `rules-1.1`; lexical retrieval is `tfidf-1.0`. These thresholds are design choices for a synthetic demo, not calibrated market predictors.
+
 ## Measurement
 
-Each report records actual wall latency, per-agent latency, agent interval overlap, source citation validity, citation count and portfolio concentration. The Evaluation endpoint executes five synthetic scenario checks against immutable baseline profiles and reports Recall@3 on four manually labeled source IDs. User profile edits do not change the test oracle. A separate endpoint runs a ten-execution fixed-snapshot latency benchmark. These measure implementation behavior; there are no future-return labels or profitability statistics.
+Each report records actual wall latency, per-agent latency, agent interval overlap, source citation validity, citation count and portfolio concentration. The Evaluation endpoint executes five synthetic scenario checks against immutable baseline profiles and reports Recall@3 on the three queries in `data/fixtures/heldout_retrieval.json`. User profile edits do not change the test oracle. A separate endpoint runs a ten-execution fixed-snapshot latency benchmark. These measure implementation behavior; there are no future-return labels or profitability statistics.
 
 ## Current boundaries
 

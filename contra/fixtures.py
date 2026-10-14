@@ -12,7 +12,7 @@ START = date(2026, 6, 8)
 
 STOCKS = {
     "ALPHA.NS": {"name": "Alpha Systems (simulated)", "sector": "Technology", "scenario": "conflict", "trend": 0.0032, "seed": 11},
-    "BETA.NS": {"name": "Beta Industries (simulated)", "sector": "Industrials", "scenario": "neutral", "trend": 0.0003, "seed": 22},
+    "BETA.NS": {"name": "Beta Industries (simulated)", "sector": "Technology", "scenario": "neutral", "trend": 0.0003, "seed": 22},
     "GAMMA.NS": {"name": "Gamma Energy (simulated)", "sector": "Energy", "scenario": "aligned", "trend": 0.0035, "seed": 33},
     "DELTA.NS": {"name": "Delta Materials (simulated)", "sector": "Materials", "scenario": "missing_filing", "trend": -0.003, "seed": 44},
 }

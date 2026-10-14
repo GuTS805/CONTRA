@@ -112,6 +112,10 @@ class HttpTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as raised:
             self.request_json("/v1/profiles/demo_growth", "PUT", {"risk_tier": ["GROWTH"]})
         self.assertEqual(raised.exception.code, 400)
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/profiles/demo_growth", "PUT",
+                              {"positions": [{"ticker": "ALPHA.NS", "value": 10 ** 1000}]})
+        self.assertEqual(raised.exception.code, 400)
 
 
 if __name__ == "__main__":

@@ -86,6 +86,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["market_snapshot"]["bars"][0]["timezone"], "Asia/Kolkata")
         self.assertFalse(report["market_snapshot"]["bars"][0]["adjusted"])
         self.assertEqual(report["investor_snapshot"]["id"], "demo_conservative")
+        self.assertEqual(report["method_version"], "rules-1.1")
         self.assertEqual(report["market_snapshot"]["document_ids"],
                          [d["id"] for d in documents() if d["ticker"] == "ALPHA.NS" and d["published_at"] <= AS_OF])
         self.assertEqual(len(report["market_snapshot"]["documents"]), len(report["market_snapshot"]["document_ids"]))
@@ -115,6 +116,8 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["synthesis"]["state"], "CAUTION")
         self.assertTrue(report["agents"]["risk"]["sector_breach"])
         self.assertFalse(report["agents"]["risk"]["single_asset_breach"])
+        alpha = self.analyze("ALPHA.NS", "demo_conservative")
+        self.assertEqual(alpha["agents"]["risk"]["sector_weight"], .4)
 
     def test_mixed_filing_evidence_is_not_called_aligned(self):
         report = self.analyze("BETA.NS", "demo_growth")

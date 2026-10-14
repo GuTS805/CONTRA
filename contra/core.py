@@ -16,7 +16,7 @@ from collections import Counter
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, documents
 from . import llm
 
-METHOD_VERSION = "rules-1.0"
+METHOD_VERSION = "rules-1.1"
 _CLOCK_ANCHOR = datetime.now(timezone.utc)
 _MONOTONIC_ANCHOR = perf_counter_ns()
 
@@ -31,6 +31,8 @@ def digest(value) -> str:
 
 
 def confidence(coverage: float, freshness: float, margin: float, quality: float = 1.0) -> dict:
+    coverage, freshness, margin, quality = (max(0, min(1, value)) for value in
+                                            (coverage, freshness, margin, quality))
     parts = {"coverage": round(coverage, 3), "freshness": round(freshness, 3),
              "threshold_margin": round(margin, 3), "source_quality": round(quality, 3)}
     score = .35 * coverage + .30 * freshness + .20 * margin + .15 * quality
@@ -345,6 +347,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     return {"run_id": run_id, "status": "COMPLETE" if synthesis["state"] not in ("PARTIAL", "INSUFFICIENT_EVIDENCE") else "PARTIAL",
             "created_at": stamp(), "ticker": ticker, "investor_id": profile["id"], "profile_revision": profile["revision"],
             "dataset_id": DATASET_ID, "as_of": as_of, "data_mode": "SYNTHETIC",
+            "method_version": METHOD_VERSION, "retrieval_method_version": "tfidf-1.0",
             "market_snapshot_hash": snapshot["market_snapshot_hash"],
             "run_context_hash": digest({"snapshot": snapshot["market_snapshot_hash"], "profile": profile}),
             "market_snapshot": {"bars": snapshot["bars"], "documents": snapshot["documents"],
