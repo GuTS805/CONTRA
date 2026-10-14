@@ -67,6 +67,13 @@ On this Windows machine, VS Code's bundled Node runtime can run the same script 
 
 ## Scope
 
+### External data staging
+
+`python -m contra.import_data path\to\snapshot.json` validates a user-supplied JSON snapshot and stores a content-addressed copy under `data/imports/`. The input needs `dataset_id`, `as_of`, `license_note`, `stocks`, `bars`, and `documents`. Each stock has `ticker`, `name`, `sector`; each bar has `ticker`, `trade_date`, positive `close` and `volume`, `source_uri` (HTTPS), `adjusted`, and `timezone`; each document has `id`, `ticker`, `title`, `published_at`, `excerpt`, `source_uri`, `source_hash` (`sha256:` of the UTF-8 excerpt), `char_start`, and `char_end`. The command prints the staged path and checksum. It rejects duplicate bars/IDs, future bars, invalid numbers, missing source links and changed excerpts.
+
+Staged snapshots carry `IMPORTED_UNVERIFIED`. The current analysis API continues to accept only the built-in synthetic dataset; staging does not attest licensing, source authenticity, or financial accuracy. Provider selection and analysis on imported snapshots remain future work.
+
+
 This is an offline-capable MVP. It has four synthetic stocks, generated dated bars, 16 synthetic filing excerpts, two stored investor profiles, a local SQLite audit log, issuer/date filtered TF-IDF retrieval, a separate labeled retrieval bundle, and a measured evaluation view. The fixture corpus is deliberately small; it is not a production financial RAG system. There is no live feed, brokerage connection, trade action or hosted deployment. Model calls are optional and remain unverified against a live account in this workspace. The synthetic scenario checks shown in Evaluation measure fixture behavior, not market prediction accuracy.
 
 For a clean restart, stop the Python process serving port 8000, then run `python -m contra.server` again. The browser URL only works while the process is running. Runtime databases and logs under `data/` are ignored by Git.

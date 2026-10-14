@@ -55,4 +55,6 @@ Each report records actual wall latency, per-agent latency, agent interval overl
 
 ## Current boundaries
 
+The separate `contra.import_data` command validates and stages user-supplied snapshots with `IMPORTED_UNVERIFIED` provenance. The analysis API remains locked to synthetic fixtures while a provider contract, licensed source verification and real filing interpretation are absent.
+
 This local version uses only Python's standard library and a static browser client. It calls an LLM only when `CONTRA_LLM=1` and `OPENAI_API_KEY` are set in the server environment. The model adapter follows the [official Responses API text guide](https://developers.openai.com/api/docs/guides/text) and [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses); it has mocked tests but no live account verification here. The three agents remain usable in deterministic fallback mode. There is no live market-data provider. The corpus is small and synthetic; TF-IDF retrieval is useful for this fixture but is not validated for real filings. SQLite is suitable for one local process, not a durable multi-instance deployment. Hosted infrastructure, authentication and compliance review remain separate work.
