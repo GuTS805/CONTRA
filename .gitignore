@@ -1,5 +1,9 @@
 __pycache__/
-*.pyc
-.env
-.venv/
-venv/
+*.py[cod]
+data/*.sqlite3
+data/*.sqlite3-shm
+data/*.sqlite3-wal
+data/*.log
+data/edge-check*/
+data/*check.png
+/debug.log

@@ -22,7 +22,7 @@ DOC_FACTS = {
         (-1, "Quarterly margin update", "Operating margin narrowed as component costs rose despite stronger reported revenue.", -1),
         (-17, "Supply chain note", "Management reported higher procurement costs and a delayed customer delivery schedule.", -1),
         (-33, "Customer update", "A large customer renewed a multiyear contract, adding to the order book.", 1),
-        (-220, "Historical business note", "An older update described stable cash generation in a prior reporting period.", 1),
+        (-220, "Historical business note", "An older update described margin pressure in a prior reporting period.", -1),
     ],
     "BETA.NS": [
         (-3, "Quarterly operations", "Revenue was steady while operating costs remained broadly unchanged.", 0),
@@ -57,7 +57,9 @@ def bars_for(ticker: str) -> list[dict]:
             volume = int(100000 + rng.uniform(-12000, 12000))
             bars.append({"id": f"BAR-{ticker}-{current.isoformat()}", "ticker": ticker,
                          "trade_date": current.isoformat(), "close": round(close, 4),
-                         "volume": volume, "mode": "SYNTHETIC", "origin": "generated_fixture"})
+                         "volume": volume, "mode": "SYNTHETIC", "origin": "generated_fixture",
+                         "timezone": "Asia/Kolkata", "adjusted": False,
+                         "fixture_as_of": AS_OF, "ingested_at": "2026-10-13T18:00:00+05:30"})
         current += timedelta(days=1)
     if ticker in ("ALPHA.NS", "GAMMA.NS"):
         bars[-1]["volume"] = 182000
