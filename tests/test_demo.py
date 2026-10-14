@@ -202,6 +202,10 @@ class DemoTests(unittest.TestCase):
         legacy["market_snapshot"]["bars"][0]["close"] += 1
         with self.assertRaises(RunIntegrityError):
             verify_run(legacy)
+        unversioned = deepcopy(legacy)
+        del unversioned["method_version"]
+        del unversioned["market_snapshot"]
+        self.assertIs(verify_run(unversioned), unversioned)
 
 
 if __name__ == "__main__":

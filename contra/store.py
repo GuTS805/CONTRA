@@ -26,13 +26,14 @@ def verify_run(report):
     expected = report.get("report_hash")
     if expected is not None and expected != digest({key: value for key, value in report.items() if key != "report_hash"}):
         raise RunIntegrityError("Saved report checksum does not match its contents")
-    market = report.get("market_snapshot", {})
-    snapshot_hash = digest({"dataset": report.get("dataset_id"), "ticker": report.get("ticker"),
-                            "as_of": report.get("as_of"), "bars": market.get("bars"),
-                            "documents": market.get("documents")})
-    if snapshot_hash != report.get("market_snapshot_hash") or \
-            digest({"snapshot": snapshot_hash, "profile": report.get("investor_snapshot")}) != report.get("run_context_hash"):
-        raise RunIntegrityError("Saved market or investor snapshot checksum does not match")
+    if expected is not None or report.get("method_version") == "rules-1.1":
+        market = report.get("market_snapshot", {})
+        snapshot_hash = digest({"dataset": report.get("dataset_id"), "ticker": report.get("ticker"),
+                                "as_of": report.get("as_of"), "bars": market.get("bars"),
+                                "documents": market.get("documents")})
+        if snapshot_hash != report.get("market_snapshot_hash") or \
+                digest({"snapshot": snapshot_hash, "profile": report.get("investor_snapshot")}) != report.get("run_context_hash"):
+            raise RunIntegrityError("Saved market or investor snapshot checksum does not match")
     return report
 
 
