@@ -36,3 +36,34 @@ jobs:
             sleep 1
           done
           node tests/ui_smoke.js
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build the deployment image
+        run: docker build -t contra:ci .
+      - name: Run the image in hosted mode and check it
+        shell: bash
+        run: |
+          docker run -d --name contra -p 8000:8000 -e CONTRA_ALLOWED_HOSTS=contra.example -e CONTRA_LLM=0 contra:ci
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/health
+          echo
+          test "$(docker exec contra id -u)" != "0"
+          curl --fail --silent -D - -o /dev/null -X POST -H 'Host: contra.example' -H 'Content-Type: application/json' \
+            -d '{}' http://127.0.0.1:8000/v1/auth/guest | grep -i '^set-cookie:.*HttpOnly.*Secure'
+          test "$(curl --silent -o /dev/null -w '%{http_code}' -H 'Host: evil.example' http://127.0.0.1:8000/v1/stocks)" = "403"
+          node tests/ui_smoke.js
+      - name: Container logs
+        if: always()
+        run: docker logs contra || true
