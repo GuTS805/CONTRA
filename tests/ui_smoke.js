@@ -37,6 +37,17 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  await vm.runInContext('evaluation()',context);
  assert(element('#view').innerHTML.includes('Scenario matrix'));
  const liveFetch=context.fetch;
+ let releaseBenchmark;
+ context.fetch=(path,options)=>path==='/v1/evaluations/benchmark'
+   ? new Promise(resolve=>{releaseBenchmark=()=>resolve(liveFetch(path,options))})
+   : liveFetch(path,options);
+ const benchmarkTask=element('#benchmark-run').onclick();
+ assert.equal(typeof releaseBenchmark,'function');
+ context.location.pathname='/';
+ await vm.runInContext('render()',context);
+ releaseBenchmark();
+ await benchmarkTask;
+ assert(element('#view').innerHTML.includes('Start an analysis'), 'Stale benchmark must not alter terminal');
  let releaseEvaluation;
  context.fetch=(path,options)=>path==='/v1/evaluations/summary'
    ? new Promise(resolve=>{releaseEvaluation=()=>resolve(liveFetch(path,options))})

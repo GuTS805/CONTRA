@@ -27,8 +27,13 @@ Scope: the supplied architecture blueprint and the current synthetic, localhost 
 - **P2, resolved — `web/app.js`:** a slow evaluation, report or evidence response could paint content after the user had navigated elsewhere. Each render now carries a token and drops stale responses. `tests/ui_smoke.js` simulates a delayed evaluation response and verifies that the terminal stays visible.
 - **Verification:** Python unit and HTTP suite: 28 passing tests. JavaScript syntax and UI runtime smoke passed. The local server was restarted on the updated code; desktop and 500 px screenshots were inspected. No type checker, bundler or lint configuration exists for this dependency-free repository.
 
+### Cycle 3: async action replay
+
+- **P2, resolved — `web/app.js`:** a benchmark response could arrive after leaving Evaluation and write into a missing result element, creating an unhandled client error. The benchmark now ignores results and failures from a prior render. `tests/ui_smoke.js` delays the response, navigates away, and waits for the action to settle without replacing the terminal.
+- **Verification:** all 28 Python tests and the UI runtime smoke still pass after this change.
+
 ### Current highest-impact gaps
 
 1. **P1 for real-world use — data and provenance:** `contra/fixtures.py`, `contra/core.py`, `contra/import_data.py`. Imported snapshots are validated and staged, but analysis still uses synthetic fixtures. Licensed feeds, issuer filing verification and a trustworthy interpretation method are not implemented.
 2. **P1 for public use — identity and deployment:** `contra/server.py`, `contra/store.py`. The server is intentionally local and unauthenticated. Hosted access requires an identity model, access controls and durable storage.
-3. **P2 — broader client verification:** `web/app.js`, `web/style.css`. The current smoke harness covers main page rendering and one navigation race. A full browser journey across the report, portfolio edit and error states would give stronger confidence.
+3. **P2 — broader client verification:** `web/app.js`, `web/style.css`. The current smoke harness covers main page rendering and two navigation races. A full browser journey across the report, portfolio edit and error states would give stronger confidence.
