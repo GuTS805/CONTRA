@@ -1,6 +1,6 @@
 # Five-minute local demo
 
-Start the server with `python -m contra.server`, then open `http://localhost:8000`.
+Start the server with `python -m contra.server`, open `http://localhost:8000` and click **Continue as guest**. The script below uses the synthetic scenarios, whose outcomes are known. To finish with real data, add `RELIANCE.NS` on the terminal, paste a recent filing excerpt in Evidence library, and run it.
 
 | Time | Action | What it proves |
 | --- | --- | --- |

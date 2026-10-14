@@ -82,3 +82,24 @@ Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at
 
 - The LLM adapter is still unverified against a live key. All agent reasoning runs in labeled deterministic fallback here.
 - The data is synthetic, and the analysis API accepts only the built-in dataset.
+
+## 15 October 2026 — accounts, live data and hosting readiness
+
+### Cycle 9: model key configuration
+- `.env` (ignored by Git) is loaded at startup without overriding shell variables. The startup log states whether model reasoning is on. HTTP tests pin `CONTRA_LLM=0`, so a developer's key never turns tests into paid calls.
+
+### Cycle 10: real market data (P1)
+- Users add NSE/BSE symbols; CONTRA fetches real daily closes from Yahoo Finance and caches them. A forming same-day bar is excluded. The report labels LIVE data, the source URL and any cache-fallback warning.
+- Users paste dated filing excerpts. These are hashed, tone-tagged by a disclosed word-list heuristic or by the user's label, searchable through Ask the filings, and never eligible before their publication date.
+
+### Cycle 11: accounts and isolation (P1)
+- Sign-up, login, guest sessions and logout. Every API route requires a session, and all data is scoped to its owner. Login, sign-up, symbol additions and analyses are rate-limited.
+
+### Cycle 12: hosting readiness
+- Hosted mode (`CONTRA_PUBLIC=1`) accepts configured or Render-provided hostnames, sets Secure cookies and HSTS, and takes the client IP from the proxy-appended `X-Forwarded-For` entry. A Dockerfile and Render Blueprint are included.
+- **Verification:** 42 Python tests, including hosted-mode rules, pass. The UI smoke test passes with a guest session. A browser flow was inspected at 1440 px and 390 px: guest login → add RELIANCE.NS (real Yahoo data) → upload a filing → set holdings → LIVE report with a sized action. Docker was unavailable, so the container image was not built.
+
+### Remaining gaps
+- No deployment has been made. Free hosting loses data on restart unless a persistent disk is attached.
+- Yahoo's endpoint is unofficial and unlicensed. Filings are user-supplied and unverified. Tone is a heuristic.
+- No email verification or password reset. Rate limits are per process.

@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+**/__pycache__
+data/*.sqlite3*
+data/*.log
+data/imports
+debug.log
+tests
+docs

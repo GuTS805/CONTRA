@@ -55,6 +55,12 @@ The implementation version saved with new runs is `rules-1.2` (`rules-1.1` runs 
 
 Each report records actual wall latency, per-agent latency, agent interval overlap, source citation validity, citation count and portfolio concentration. The Evaluation endpoint executes five synthetic scenario checks against immutable baseline profiles and reports Recall@3 on the three queries in `data/fixtures/heldout_retrieval.json`. User profile edits do not change the test oracle. A separate endpoint runs a ten-execution fixed-snapshot latency benchmark. These measure implementation behavior; there are no future-return labels or profitability statistics.
 
+## Accounts and live data
+
+- `contra/auth.py` hashes passwords with scrypt and issues random session tokens. Only SHA-256 hashes of the tokens are stored, and the cookie is HttpOnly and SameSite=Lax (Secure in hosted mode). Profiles, runs, live symbols and filings are keyed by owner, and every query filters by it.
+- `contra/live.py` fetches about six months of daily bars from Yahoo Finance's chart endpoint, drops forming, null and zero-volume bars, and caches them for six hours. User-supplied filings are validated (no future dates, HTTPS links only) and hashed. Live snapshots use dataset `yahoo_chart_daily_v1` and mode `LIVE`, and go through the same `prepare()` integrity and as-of filtering as fixtures.
+- `contra/settings.py` loads `.env` without overriding the shell environment.
+
 ## Current boundaries
 
 The separate `contra.import_data` command validates and stages user-supplied snapshots with `IMPORTED_UNVERIFIED` provenance. The analysis API remains locked to synthetic fixtures while a provider contract, licensed source verification and real filing interpretation are absent.

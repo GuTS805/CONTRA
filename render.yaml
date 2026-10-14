@@ -1,0 +1,15 @@
+# Render Blueprint: New > Blueprint, then select this repository.
+services:
+  - type: web
+    name: contra
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Render sets RENDER_EXTERNAL_HOSTNAME and PORT; the server trusts that hostname.
+      - key: CONTRA_LLM
+        value: "1"
+      - key: CONTRA_MODEL
+        value: gpt-6-astra
+      - key: OPENAI_API_KEY
+        sync: false
