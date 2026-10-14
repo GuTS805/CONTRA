@@ -135,6 +135,20 @@ class HttpTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_portfolio_holdings_update_changes_suitability(self):
+        _, before = self.request_json("/v1/profiles/demo_growth/portfolio")
+        positions = [{"ticker": "ALPHA.NS", "value": 60000}, {"ticker": "BETA.NS", "value": 0},
+                     {"ticker": "GAMMA.NS", "value": 0}, {"ticker": "DELTA.NS", "value": 0},
+                     {"ticker": "CASH", "value": 40000}]
+        _, updated = self.request_json("/v1/profiles/demo_growth", "PUT",
+                                       {"positions": positions, "expected_revision": before["revision"]})
+        self.assertEqual(updated["revision"], before["revision"] + 1)
+        _, report = self.request_json("/v1/analyses", "POST",
+                                      {"ticker": "ALPHA.NS", "investor_id": "demo_growth"})
+        self.assertEqual(report["agents"]["risk"]["position_weight"], .6)
+        self.assertTrue(report["synthesis"]["suitability_breach"])
+        self.assertEqual(report["investor_snapshot"]["positions"], positions)
+
     def test_saved_report_corruption_is_detected_on_replay(self):
         _, report = self.request_json("/v1/analyses", "POST",
                                       {"ticker": "GAMMA.NS", "investor_id": "demo_growth"})

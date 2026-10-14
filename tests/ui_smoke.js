@@ -31,5 +31,7 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  vm.runInContext('portfolio()',context);
  assert(element('#view').innerHTML.includes('SECTOR CAP'));
  assert(element('#view').innerHTML.includes('Sector exposure'));
+ assert(element('#view').innerHTML.includes('Edit synthetic holdings'));
+ assert.equal(typeof element('#save-holdings').onclick,'function');
  console.log('UI runtime smoke: terminal, report, comparison, evaluation, evidence, portfolio passed');
 })().catch(error=>{console.error(error);process.exitCode=1});

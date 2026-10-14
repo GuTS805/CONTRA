@@ -31,6 +31,8 @@ Implementation notes: [architecture](docs/architecture.md) · [five-minute demo]
 5. Use **Compare** to see both investor outcomes side by side against the same market snapshot. Refresh a saved run URL to verify persistence.
 6. Reopen a report from **Recent analyses**. Open Evaluation to execute the synthetic scenario matrix, inspect citation validity and Recall@3, then run the 10-execution latency benchmark.
 
+On the Portfolio page, edit synthetic holding values or risk limits to create a new profile revision. New analyses use the updated profile; saved runs retain their original portfolio snapshot.
+
 The terminal also accepts an as-of date within the fixture range. Choosing an early date with fewer than 21 bars produces `INSUFFICIENT_EVIDENCE`; future-dated documents never enter that run.
 
 The three analyzers execute concurrently. With no model configuration, they use independent deterministic fallback pipelines and the UI labels this explicitly. An optional server-side model adapter can select a constrained focus and source IDs; numeric values, statuses, assessments and canonical facts remain code-authoritative. A failed or invalid model response falls back per agent.
