@@ -105,3 +105,28 @@ main{width:min(1320px,100%);padding-top:34px}
 .meter i{display:block;height:100%;background:#53cba6;border-radius:6px}.meter i.over{background:var(--coral)}
 .chart-wrap{position:relative}
 @media(max-width:700px){.rec-top{flex-direction:column}.rec-arrow{display:none}.ask-form{flex-direction:column}.recommendation h2{font-size:18px}.recent-row{flex-wrap:wrap}}
+
+/* Accounts, live symbols and filing uploads */
+.user-chip{display:flex;align-items:center;gap:10px}.user-chip .user-name{color:#1f3f33}
+.user-chip .text-button{font-size:11px}
+.auth-wrap{max-width:980px;margin:0 auto}
+.auth-hero{margin-bottom:18px}
+.auth-tabs{display:flex;gap:6px;background:#eef4f0;border-radius:10px;padding:4px;margin-bottom:6px}
+.auth-tab{flex:1;border:0;background:none;border-radius:8px;padding:9px;font-weight:700;color:#4d6a5d}
+.auth-tab.active{background:#fff;color:#14543e;box-shadow:0 1px 4px #1e46311a}
+.auth-form{display:grid;gap:14px;margin-top:12px}
+.mode-tag{display:inline-block;border-radius:4px;padding:3px 6px;font-size:9px;font-weight:800;letter-spacing:.6px;background:#eef1f4;color:#4c5e70;border:1px solid #d9e0e6}
+.mode-tag.live{background:#e8f1ff;color:#24539a;border-color:#c5d8f5}
+.stock-badge.live{background:#e3edfb;color:#24539a}
+.stock-actions{display:flex;align-items:center;gap:6px}
+.remove{border:0;background:none;color:#a14d42;font-size:11px;font-weight:700;padding:4px 6px;border-radius:5px}
+.remove:hover{background:#fff0ed}
+.list-label{color:#5b7168;font-size:10px;font-weight:800;letter-spacing:1px;margin:14px 0 2px}
+.add-stock{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin:14px 0 4px}
+.add-stock .secondary{min-height:43px}
+.doc-form textarea{width:100%;padding:11px 12px;border:1px solid #cadbd0;border-radius:8px;font:inherit;resize:vertical;background:#fff;color:#213344}
+.doc-form textarea:focus{border-color:#288865;box-shadow:0 0 0 3px #51c48a2a;outline:none}
+.evidence-card{position:relative}.evidence-card .evidence-item{height:100%}
+.doc-remove{position:absolute;top:10px;right:10px;background:#fff}
+@media(max-width:700px){.add-stock{grid-template-columns:1fr}.user-chip .user-name{display:none}}
+.evidence-list{align-content:start}

@@ -10,8 +10,10 @@ import sys
 import tempfile
 import time
 import unittest
+from datetime import date, datetime, timedelta, timezone
+from http.cookiejar import CookieJar
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 
 class HttpTests(unittest.TestCase):
@@ -23,7 +25,9 @@ class HttpTests(unittest.TestCase):
             cls.port = sock.getsockname()[1]
         cls.base = f"http://127.0.0.1:{cls.port}"
         env = {**os.environ, "CONTRA_DB": os.path.join(cls.tmp.name, "http.sqlite3"),
-               "CONTRA_PORT": str(cls.port), "CONTRA_HOST": "127.0.0.1"}
+               "CONTRA_PORT": str(cls.port), "CONTRA_HOST": "127.0.0.1",
+               # Keep a developer's .env key from turning tests into paid model calls.
+               "CONTRA_LLM": "0", "CONTRA_ENV_FILE": os.devnull}
         cls.process = subprocess.Popen([sys.executable, "-m", "contra.server"],
                                        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.monotonic() + 6
@@ -31,6 +35,7 @@ class HttpTests(unittest.TestCase):
             try:
                 with urlopen(cls.base + "/health", timeout=.3) as response:
                     if json.load(response)["status"] == "ok":
+                        cls.opener = cls.session()
                         return
             except OSError:
                 time.sleep(.05)
@@ -47,16 +52,30 @@ class HttpTests(unittest.TestCase):
             cls.process.wait()
         cls.tmp.cleanup()
 
-    def request_json(self, path, method="GET", data=None):
+    @classmethod
+    def session(cls, path="/v1/auth/guest", data=None):
+        """A cookie-carrying client logged in through the given auth route."""
+        opener = build_opener(HTTPCookieProcessor(CookieJar()))
+        request = Request(cls.base + path, data=json.dumps(data or {}).encode(), method="POST",
+                          headers={"Content-Type": "application/json"})
+        with opener.open(request, timeout=5) as response:
+            response.read()
+        return opener
+
+    def request_json(self, path, method="GET", data=None, opener=None):
         body = json.dumps(data).encode() if data is not None else None
         request = Request(self.base + path, data=body, method=method,
                           headers={"Content-Type": "application/json"})
-        with urlopen(request, timeout=5) as response:
+        with (opener or self.opener).open(request, timeout=5) as response:
             return response.status, json.load(response)
+
+    def db_path(self):
+        return os.path.join(self.tmp.name, "http.sqlite3")
 
     def test_loopback_origin_and_json_guards(self):
         cases = [
-            ("GET", "/health", None, {"Host": "attacker.example"}, 403, "INVALID_HOST"),
+            ("GET", "/v1/stocks", None, {"Host": "attacker.example"}, 403, "INVALID_HOST"),
+            ("GET", "/", None, {"Host": "attacker.example"}, 403, "INVALID_HOST"),
             ("POST", "/v1/analyses", b"{}", {"Content-Type": "application/json", "Origin": "https://attacker.example"}, 403, "INVALID_ORIGIN"),
             ("PUT", "/v1/profiles/demo_growth", b"{}", {"Content-Type": "text/plain"}, 415, "UNSUPPORTED_MEDIA_TYPE"),
         ]
@@ -166,7 +185,8 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 404)
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         try:
-            connection.request("POST", "/v1/analyses", body=b"", headers={"Content-Length": "-1", "Content-Type": "application/json"})
+            connection.request("POST", "/v1/analyses", body=b"", headers={"Content-Length": "-1", "Content-Type": "application/json",
+                                                                          "Host": f"127.0.0.1:{self.port}"})
             response = connection.getresponse()
             self.assertEqual(response.status, 400)
             self.assertEqual(json.load(response)["error"], "BAD_INPUT")
@@ -204,7 +224,7 @@ class HttpTests(unittest.TestCase):
     def test_saved_report_corruption_is_detected_on_replay(self):
         _, report = self.request_json("/v1/analyses", "POST",
                                       {"ticker": "GAMMA.NS", "investor_id": "demo_growth"})
-        db_path = os.path.join(self.tmp.name, "http.sqlite3")
+        db_path = self.db_path()
         with closing(sqlite3.connect(db_path)) as db, db:
             original = db.execute("SELECT payload FROM runs WHERE id=?", (report["run_id"],)).fetchone()[0]
             changed = json.loads(original)
@@ -219,6 +239,100 @@ class HttpTests(unittest.TestCase):
         finally:
             with closing(sqlite3.connect(db_path)) as db, db:
                 db.execute("UPDATE runs SET payload=? WHERE id=?", (original, report["run_id"]))
+
+    def test_accounts_are_required_and_isolated(self):
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(self.base + "/v1/profiles", timeout=5)
+        self.assertEqual((raised.exception.code, json.load(raised.exception)["error"]), (401, "AUTH_REQUIRED"))
+        with urlopen(self.base + "/", timeout=5) as response:
+            self.assertEqual(response.status, 200, "the login page itself is public")
+        alice = self.session("/v1/auth/signup", {"username": "alice_test", "password": "correct horse"})
+        _, me = self.request_json("/v1/auth/me", opener=alice)
+        self.assertEqual((me["username"], me["is_guest"]), ("alice_test", False))
+        with self.assertRaises(HTTPError) as raised:
+            self.session("/v1/auth/signup", {"username": "ALICE_test", "password": "another pass"})
+        self.assertEqual(raised.exception.code, 400, "usernames are unique regardless of case")
+        with self.assertRaises(HTTPError) as raised:
+            self.session("/v1/auth/login", {"username": "alice_test", "password": "wrong password"})
+        self.assertEqual(raised.exception.code, 401)
+        with self.assertRaises(HTTPError) as raised:
+            self.session("/v1/auth/signup", {"username": "bob", "password": "short"})
+        self.assertEqual(raised.exception.code, 400)
+        _, report = self.request_json("/v1/analyses", "POST", {"ticker": "ALPHA.NS", "investor_id": "demo_conservative"},
+                                      opener=alice)
+        _, updated = self.request_json("/v1/profiles/demo_growth", "PUT", {"max_single_asset_weight": .2}, opener=alice)
+        self.assertEqual(updated["max_single_asset_weight"], .2)
+        stranger = self.session()
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/analyses/" + report["run_id"], opener=stranger)
+        self.assertEqual(raised.exception.code, 404, "another account cannot open this run")
+        _, history = self.request_json("/v1/analyses", opener=stranger)
+        self.assertEqual(history["total"], 0)
+        _, theirs = self.request_json("/v1/profiles/demo_growth/portfolio", opener=stranger)
+        self.assertEqual(theirs["max_single_asset_weight"], .3, "profile edits stay with their owner")
+        again = self.session("/v1/auth/login", {"username": "alice_test", "password": "correct horse"})
+        _, mine = self.request_json("/v1/analyses/" + report["run_id"], opener=again)
+        self.assertEqual(mine["run_id"], report["run_id"])
+        self.request_json("/v1/auth/logout", "POST", {}, opener=again)
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/auth/me", opener=again)
+        self.assertEqual(raised.exception.code, 401)
+
+    def test_live_symbol_with_uploaded_filing(self):
+        user = self.session()
+        _, me = self.request_json("/v1/auth/me", opener=user)
+        today = date.today()
+        bars, day = [], today - timedelta(days=60)
+        while day < today:
+            if day.weekday() < 5:
+                bars.append({"id": f"BAR-TEST.NS-{day}", "ticker": "TEST.NS", "trade_date": day.isoformat(),
+                             "close": float(100 + len(bars)), "volume": 1000 + len(bars), "mode": "LIVE",
+                             "origin": "yahoo_finance_chart", "source_uri": "https://query1.finance.yahoo.com/x",
+                             "timezone": "Asia/Kolkata", "adjusted": False})
+            day += timedelta(days=1)
+        # Seed the price cache directly so the test never calls Yahoo Finance.
+        with closing(sqlite3.connect(self.db_path())) as db, db:
+            db.execute("INSERT OR REPLACE INTO market_bars(ticker,payload,fetched_at) VALUES (?,?,?)",
+                       ("TEST.NS", json.dumps(bars), datetime.now(timezone.utc).isoformat()))
+            db.execute("INSERT INTO user_securities(owner_id,ticker,name,sector,added_at) VALUES (?,?,?,?,?)",
+                       (me["id"], "TEST.NS", "Test Industries", "Industrials", "2026-01-01"))
+        _, catalog = self.request_json("/v1/stocks", opener=user)
+        listed = next(item for item in catalog["stocks"] if item["ticker"] == "TEST.NS")
+        self.assertEqual((listed["mode"], listed["last_date"]), ("LIVE", bars[-1]["trade_date"]))
+        _, filing = self.request_json("/v1/documents", "POST", {
+            "ticker": "TEST.NS", "title": "Quarterly results", "published_at": (today - timedelta(days=5)).isoformat(),
+            "excerpt": "Revenue grew and operating margin improved after record orders were awarded.",
+            "source_uri": "https://example.com/filing.pdf"}, opener=user)
+        self.assertGreater(filing["tone"], 0)
+        self.assertEqual(filing["tone_source"], "LEXICON_HEURISTIC")
+        bad_filings = ({"ticker": "ALPHA.NS", "title": "Fixture", "published_at": "2026-01-01", "excerpt": "x" * 30},
+                       {"ticker": "TEST.NS", "title": "Future", "published_at": (today + timedelta(days=3)).isoformat(),
+                        "excerpt": "A filing from the future should never be accepted."},
+                       {"ticker": "TEST.NS", "title": "Bad link", "published_at": "2026-01-01",
+                        "excerpt": "This filing has an unsafe source link.", "source_uri": "javascript:alert(1)"})
+        for payload in bad_filings:
+            with self.subTest(title=payload["title"]), self.assertRaises(HTTPError) as raised:
+                self.request_json("/v1/documents", "POST", payload, opener=user)
+            self.assertEqual(raised.exception.code, 400)
+        self.request_json("/v1/profiles/demo_growth", "PUT", {"positions": [
+            {"ticker": "TEST.NS", "value": 40000}, {"ticker": "CASH", "value": 60000}]}, opener=user)
+        _, report = self.request_json("/v1/analyses", "POST", {"ticker": "TEST.NS", "investor_id": "demo_growth"},
+                                      opener=user)
+        self.assertEqual((report["data_mode"], report["dataset_id"]), ("LIVE", "yahoo_chart_daily_v1"))
+        self.assertEqual(report["as_of"], bars[-1]["trade_date"])
+        self.assertEqual(report["signals"]["momentum"]["label"], "BULLISH")
+        self.assertEqual(report["evidence"][0]["id"], filing["id"])
+        self.assertEqual(report["agents"]["risk"]["sector"], "Industrials")
+        self.assertEqual(report["recommendation"]["action"], "REDUCE_EXPOSURE")
+        _, replay = self.request_json("/v1/analyses/" + report["run_id"], opener=user)
+        self.assertEqual(replay, report)
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/securities/TEST.NS", "DELETE", opener=user)
+        self.assertEqual(raised.exception.code, 409, "a held symbol cannot be removed")
+        self.request_json("/v1/documents/" + filing["id"], "DELETE", opener=user)
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/securities", "POST", {"ticker": "not a symbol", "sector": "Energy"}, opener=user)
+        self.assertEqual(raised.exception.code, 400)
 
 
 if __name__ == "__main__":

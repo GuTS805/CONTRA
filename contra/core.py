@@ -75,27 +75,38 @@ def validate_agent_payload(agent: str, result: dict) -> None:
             raise ValueError(f"{agent} has invalid evidence confidence components")
 
 
-def prepare(ticker: str, as_of: str) -> dict:
-    if ticker not in STOCKS:
-        raise ValueError("Unknown ticker")
+def prepare(ticker: str, as_of: str, bars: list[dict] | None = None, docs: list[dict] | None = None,
+            dataset_id: str = DATASET_ID, mode: str = "SYNTHETIC") -> dict:
+    """Freeze the dated bars and documents visible at `as_of`.
+
+    Without `bars`, the built-in synthetic fixtures are used. Live callers pass
+    provider bars and the user's filings along with their dataset ID and mode.
+    """
+    if bars is None:
+        if ticker not in STOCKS:
+            raise ValueError("Unknown ticker")
+        bars, docs = bars_for(ticker), [d for d in documents() if d["ticker"] == ticker]
+    if not isinstance(as_of, str):
+        raise ValueError("as_of must be an ISO date")
     try:
         cutoff = date.fromisoformat(as_of)
     except ValueError as exc:
         raise ValueError("Invalid as_of date") from exc
-    if cutoff > date.fromisoformat(AS_OF):
-        raise ValueError("as_of exceeds available fixture dates")
-    bars = [b for b in bars_for(ticker) if b["trade_date"] <= as_of]
-    docs = [d for d in documents() if d["ticker"] == ticker and d["published_at"] <= as_of]
+    last_date = max((b["trade_date"] for b in bars), default=None)
+    if last_date is None or cutoff > date.fromisoformat(last_date):
+        raise ValueError(f"as_of is after the latest available bar ({last_date})" if last_date else "No price bars are available")
+    bars = [b for b in bars if b["trade_date"] <= as_of]
+    docs = [d for d in docs or [] if d["ticker"] == ticker and d["published_at"] <= as_of]
     if len({b["id"] for b in bars}) != len(bars) or len({d["id"] for d in docs}) != len(docs):
         raise ValueError("Duplicate source ID in the frozen snapshot")
     if any(d["source_hash"] != "sha256:" + sha256(d["excerpt"].encode()).hexdigest() for d in docs):
         raise ValueError("Document excerpt integrity check failed")
-    if any(b["ticker"] != ticker or b["mode"] != "SYNTHETIC" for b in bars):
+    if any(b["ticker"] != ticker or b["mode"] != mode for b in bars):
         raise ValueError("Invalid market bar provenance")
-    market_hash = digest({"dataset": DATASET_ID, "ticker": ticker, "as_of": as_of,
+    market_hash = digest({"dataset": dataset_id, "ticker": ticker, "as_of": as_of,
                           "bars": bars, "documents": docs})
     return {"ticker": ticker, "as_of": as_of, "bars": bars, "documents": docs,
-            "market_snapshot_hash": market_hash, "data_mode": "SYNTHETIC"}
+            "market_snapshot_hash": market_hash, "data_mode": mode, "dataset_id": dataset_id}
 
 
 def numeric_signals(snapshot: dict) -> dict:
@@ -215,7 +226,7 @@ def filing_signal(snapshot: dict, retrieved: list[dict]) -> dict:
     return {"status": status, "label": label, "value": round(tone, 3), "unit": "fixture fact-tone mean",
             "evidence_confidence": confidence(min(1, len(retrieved) / 3), fresh, min(1, abs(tone) / .8), .8),
             "evidence_ids": [d["id"] for d in retrieved],
-            "reason": "Filing tone is computed from the cited synthetic excerpt tags; contradictory tags produce MIXED.",
+            "reason": "Filing tone is the mean of the cited excerpts' tone tags; contradictory tags produce MIXED.",
             "warning": "At least one cited filing is over 120 days old" if stale else None}
 
 
@@ -267,7 +278,7 @@ def research_agent(signal: dict, retrieved: list[dict]) -> dict:
             "evidence_ids": signal["evidence_ids"], "warnings": [signal["warning"]] if signal.get("warning") else []}
 
 
-def risk_agent(profile: dict, ticker: str) -> dict:
+def risk_agent(profile: dict, ticker: str, sectors: dict | None = None) -> dict:
     positions = profile["positions"]
     total = sum(p["value"] for p in positions if p["value"] is not None)
     if not total or any(p["value"] is None for p in positions):
@@ -275,8 +286,9 @@ def risk_agent(profile: dict, ticker: str) -> dict:
                 "facts": [], "evidence_ids": [], "warnings": ["Incomplete portfolio valuation"]}
     weight = sum(p["value"] for p in positions if p["ticker"] == ticker) / total
     cap = profile["max_single_asset_weight"]
-    sector = STOCKS[ticker]["sector"]
-    sector_weight = sum(p["value"] for p in positions if p["ticker"] in STOCKS and STOCKS[p["ticker"]]["sector"] == sector) / total
+    sector = _sector_of(ticker, sectors)
+    sector_weight = sum(p["value"] for p in positions if p["ticker"] != "CASH" and
+                        _sector_of(p["ticker"], sectors) == sector) / total
     sector_cap = profile["max_sector_weight"]
     hhi = sum((p["value"] / total) ** 2 for p in positions)
     single_breach = weight > cap
@@ -343,11 +355,15 @@ def synthesize(agents: dict, signals: dict) -> dict:
 ACTIONS = {"REDUCE_EXPOSURE", "HOLD_REVIEW", "HOLD", "ELIGIBLE_TO_ADD", "AVOID_ADDING", "NO_VIEW"}
 
 
-def _sector_of(ticker: str) -> str:
-    return "Cash" if ticker == "CASH" else STOCKS[ticker]["sector"] if ticker in STOCKS else "Unclassified"
+def _sector_of(ticker: str, sectors: dict | None = None) -> str:
+    """Sector for a holding; `sectors` adds user-registered tickers to the synthetic universe."""
+    if ticker == "CASH":
+        return "Cash"
+    known = {**{key: spec["sector"] for key, spec in STOCKS.items()}, **(sectors or {})}
+    return known.get(ticker, "Unclassified")
 
 
-def portfolio_insights(profile: dict) -> dict:
+def portfolio_insights(profile: dict, sectors: dict | None = None) -> dict:
     """Per-holding limit checks with the trim or headroom each configured cap implies.
 
     Sizing assumes trims are held as cash, so the portfolio total stays constant.
@@ -361,11 +377,12 @@ def portfolio_insights(profile: dict) -> dict:
                 "summary": "The portfolio has no valued holdings."}
     sector_values = {}
     for p in positions:
-        sector_values[_sector_of(p["ticker"])] = sector_values.get(_sector_of(p["ticker"]), 0) + p["value"]
-    sectors = []
+        sector = _sector_of(p["ticker"], sectors)
+        sector_values[sector] = sector_values.get(sector, 0) + p["value"]
+    sector_rows = []
     for name, value in sorted(sector_values.items(), key=lambda item: -item[1]):
         limited = name not in ("Cash", "Unclassified")
-        sectors.append({"sector": name, "value": value, "weight": round(value / total, 4),
+        sector_rows.append({"sector": name, "value": value, "weight": round(value / total, 4),
                         "cap": sector_cap if limited else None,
                         "breach": limited and value > sector_cap * total,
                         "excess_value": round(max(0, value - sector_cap * total), 2) if limited else 0})
@@ -373,23 +390,23 @@ def portfolio_insights(profile: dict) -> dict:
     for p in positions:
         if p["ticker"] == "CASH":
             continue
-        sector = _sector_of(p["ticker"])
+        sector = _sector_of(p["ticker"], sectors)
         excess = max(0, p["value"] - cap * total)
         headroom = max(0, min(cap * total - p["value"], sector_cap * total - sector_values[sector]))
         holdings.append({"ticker": p["ticker"], "sector": sector, "value": p["value"],
                          "weight": round(p["value"] / total, 4), "cap": cap,
                          "breach": p["value"] > cap * total, "trim_to_cap": round(excess, 2),
                          "headroom_value": round(headroom, 2)})
-    breaches = sum(h["breach"] for h in holdings) + sum(s["breach"] for s in sectors)
+    breaches = sum(h["breach"] for h in holdings) + sum(s["breach"] for s in sector_rows)
     hhi = sum((p["value"] / total) ** 2 for p in positions)
     summary = ("All holdings are within this profile's configured limits." if not breaches else
                f"{breaches} configured limit{'s are' if breaches > 1 else ' is'} exceeded; see the trims below.")
     return {"profile_id": profile["id"], "revision": profile["revision"], "total_value": total,
-            "holdings": holdings, "sectors": sectors, "breach_count": breaches, "hhi": round(hhi, 4),
+            "holdings": holdings, "sectors": sector_rows, "breach_count": breaches, "hhi": round(hhi, 4),
             "summary": summary, "sizing_assumption": "Trims are held as cash, so the portfolio total is unchanged."}
 
 
-def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict) -> dict:
+def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict, sectors: dict | None = None) -> dict:
     """Deterministic, explainable portfolio action for this investor.
 
     The action comes from a fixed policy over the validated agent outputs and saved
@@ -411,7 +428,7 @@ def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict) -> dict
         headline = "No view. The saved portfolio cannot be valued."
         would_change.append("Entering a value for every holding would allow suitability sizing.")
     else:
-        insight = portfolio_insights(profile)
+        insight = portfolio_insights(profile, sectors)
         total = insight["total_value"]
         held = risk["position_weight"] * total
         sector_value = risk["sector_weight"] * total
@@ -489,9 +506,12 @@ def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict) -> dict
             "basis": "Deterministic policy over cited evidence and this saved profile. It is not personalized financial advice."}
 
 
-async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: bool = True) -> dict:
+async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: bool = True,
+                  snapshot: dict | None = None, sectors: dict | None = None, warnings: list[str] | None = None) -> dict:
+    """Run the three agents on a frozen snapshot. Pass `snapshot` from prepare() for live data."""
     wall_start = perf_counter()
-    snapshot = prepare(ticker, as_of)
+    snapshot = snapshot or prepare(ticker, as_of)
+    as_of = snapshot["as_of"]
     numeric = numeric_signals(snapshot)
     retrieved = retrieve(snapshot, max_age_days=FILING_MAX_AGE_DAYS)
     signals = {**numeric, "filing_tone": filing_signal(snapshot, retrieved)}
@@ -503,7 +523,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
                         "research": {doc["id"] for doc in retrieved}, "risk": {profile["id"]}}
     tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"]),
              timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"]),
-             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker)), allow_llm, allowed_by_agent["risk"])]
+             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker, sectors)), allow_llm, allowed_by_agent["risk"])]
     outcomes = await asyncio.gather(*(asyncio.wait_for(task, timeout=10 if allow_llm and llm.configured() else 2) for task in tasks), return_exceptions=True)
     agents = {}
     for key, outcome in zip(("market", "research", "risk"), outcomes):
@@ -532,14 +552,15 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             elif agent["status"] == "OK":
                 agent["status"] = "PARTIAL"
     synthesis = synthesize(agents, signals)
-    recommendation = recommend(ticker, profile, agents, synthesis)
+    recommendation = recommend(ticker, profile, agents, synthesis, sectors)
     cited = list(dict.fromkeys(x for a in agents.values() for x in a["evidence_ids"] if x.startswith("E-")))
     evidence = [d for d in retrieved if d["id"] in cited]
     run_id = "run_" + uuid.uuid4().hex[:12]
     wall_ms = round((perf_counter() - wall_start) * 1000, 2)
     report = {"run_id": run_id, "status": "COMPLETE" if synthesis["state"] not in ("PARTIAL", "INSUFFICIENT_EVIDENCE") else "PARTIAL",
             "created_at": stamp(), "ticker": ticker, "investor_id": profile["id"], "profile_revision": profile["revision"],
-            "dataset_id": DATASET_ID, "as_of": as_of, "data_mode": "SYNTHETIC",
+            "dataset_id": snapshot["dataset_id"], "as_of": as_of, "data_mode": snapshot["data_mode"],
+            "data_warnings": list(warnings or []),
             "method_version": METHOD_VERSION, "retrieval_method_version": "tfidf-1.0",
             "market_snapshot_hash": snapshot["market_snapshot_hash"],
             "run_context_hash": digest({"snapshot": snapshot["market_snapshot_hash"], "profile": profile}),

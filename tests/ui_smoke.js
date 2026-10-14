@@ -2,18 +2,22 @@ const fs=require('fs');
 const vm=require('vm');
 const assert=require('assert');
 const base=process.env.CONTRA_BASE_URL||'http://127.0.0.1:8000';
+let cookie='';
+const authed=(url,options={})=>fetch(url,{...options,headers:{...(options.headers||{}),Cookie:cookie}});
 const elements=new Map();
 const listeners={};
 function element(key){if(!elements.has(key))elements.set(key,{innerHTML:'',textContent:'',hidden:false,isConnected:true,onclick:null,onchange:null,value:'',attributes:{},setAttribute(name,value){this.attributes[name]=value},getAttribute(name){return this.attributes[name]},focus(){document.activeElement=this},contains(child){return key==='#drawer'&&child===element('#drawer .drawer-close')},querySelector(){return null},querySelectorAll(){return key==='#drawer'?[element('#drawer .drawer-close')]:[]}});return elements.get(key)}
 const document={querySelector:element,querySelectorAll(){return []},addEventListener(type,callback){listeners[type]=callback},activeElement:null};
-const context={document,window:{},history:{pushState(_,__,path){context.location.pathname=path}},location:{pathname:'/'},fetch:(path,options)=>fetch(base+path,options),console,alert:message=>{throw Error(message)}};
+const context={document,window:{},history:{pushState(_,__,path){context.location.pathname=path}},location:{pathname:'/'},fetch:(path,options)=>authed(base+path,options),console,alert:message=>{throw Error(message)}};
 vm.createContext(context);
 let source=fs.readFileSync('web/app.js','utf8');
 source=source.replace('window.onpopstate=render;render();','window.onpopstate=render;');
 vm.runInContext(source,context);
 assert.equal(vm.runInContext("esc('<script>')",context),'&lt;script&gt;');
-async function analysis(investor){const response=await fetch(base+'/v1/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:'ALPHA.NS',investor_id:investor})});assert.equal(response.status,201);return response.json()}
+async function analysis(investor){const response=await authed(base+'/v1/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:'ALPHA.NS',investor_id:investor})});assert.equal(response.status,201);return response.json()}
 (async()=>{
+ const guest=await fetch(base+'/v1/auth/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+ assert.equal(guest.status,201);cookie=guest.headers.get('set-cookie').split(';')[0];
  await vm.runInContext('render()',context);
  assert(element('#view').innerHTML.includes('Start an analysis'));
  const first=await analysis('demo_conservative');context.first=first;
@@ -83,11 +87,11 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  context.fetch=liveFetch;
  context.location.pathname='/evidence';
  await vm.runInContext('render()',context);
- assert(element('#view').innerHTML.includes('Synthetic filing excerpts'));
+ assert(element('#view').innerHTML.includes('Filing excerpts'));
  vm.runInContext('portfolio()',context);
  assert(element('#view').innerHTML.includes('SECTOR CAP'));
  assert(element('#view').innerHTML.includes('Sector exposure'));
- assert(element('#view').innerHTML.includes('Edit synthetic holdings'));
+ assert(element('#view').innerHTML.includes('Edit holdings'));
  assert.equal(typeof element('#save-holdings').onclick,'function');
  console.log('UI runtime smoke: terminal, report, comparison, evaluation, evidence, portfolio passed');
 })().catch(error=>{console.error(error);process.exitCode=1});

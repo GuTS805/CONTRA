@@ -9,3 +9,6 @@ data/*.stdin
 data/edge-check*/
 data/*check.png
 /debug.log
+.env
+.env.*
+!.env.example

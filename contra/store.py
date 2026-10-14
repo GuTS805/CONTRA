@@ -1,4 +1,4 @@
-"""SQLite persistence for profiles and immutable analysis reports."""
+"""SQLite persistence for accounts, per-user profiles, filings and immutable analysis reports."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -12,6 +12,9 @@ from .fixtures import STOCKS
 from .core import digest
 
 DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "contra.sqlite3"
+# Owner for in-process use without accounts (tests and command-line scripts).
+LOCAL_OWNER = "local"
+_MIGRATED: set[str] = set()
 
 
 class RevisionConflict(Exception):
@@ -37,18 +40,46 @@ def verify_run(report):
     return report
 
 
+def _migrate(db: sqlite3.Connection) -> None:
+    db.execute("PRAGMA journal_mode=WAL")
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, investor_id TEXT NOT NULL, ticker TEXT NOT NULL,
+            created_at TEXT NOT NULL, payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            password_hash TEXT, is_guest INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+            expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS user_profiles (owner_id TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL,
+            PRIMARY KEY (owner_id, id));
+        CREATE TABLE IF NOT EXISTS user_securities (owner_id TEXT NOT NULL, ticker TEXT NOT NULL, name TEXT NOT NULL,
+            sector TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (owner_id, ticker));
+        CREATE TABLE IF NOT EXISTS user_documents (owner_id TEXT NOT NULL, id TEXT NOT NULL, ticker TEXT NOT NULL,
+            payload TEXT NOT NULL, PRIMARY KEY (owner_id, id));
+        CREATE TABLE IF NOT EXISTS market_bars (ticker TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL);
+    """)
+    columns = {row[1] for row in db.execute("PRAGMA table_info(runs)")}
+    if "owner_id" not in columns:
+        # Runs saved before accounts existed have no owner and are not shown to any user.
+        db.execute("ALTER TABLE runs ADD COLUMN owner_id TEXT")
+    db.execute("CREATE INDEX IF NOT EXISTS runs_owner_date ON runs(owner_id, created_at)")
+    db.commit()
+
+
 def connect(path: str | Path | None = None) -> sqlite3.Connection:
     target = Path(path or os.environ.get("CONTRA_DB", DEFAULT_DB))
     target.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(target)
+    db = sqlite3.connect(target, timeout=10)
     db.row_factory = sqlite3.Row
-    db.execute("PRAGMA journal_mode=WAL")
-    db.execute("CREATE TABLE IF NOT EXISTS profiles (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
-    db.execute("CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, investor_id TEXT NOT NULL, ticker TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL)")
-    db.execute("CREATE INDEX IF NOT EXISTS runs_investor_date ON runs(investor_id, created_at)")
-    db.commit()
-    seed_profiles(db)
+    key = str(target.resolve())
+    if key not in _MIGRATED:
+        _migrate(db)
+        seed_profiles(db, LOCAL_OWNER)
+        _MIGRATED.add(key)
     return db
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def baseline_profiles(updated_at: str | None = None) -> list[dict]:
@@ -67,24 +98,123 @@ def baseline_profiles(updated_at: str | None = None) -> list[dict]:
     return result
 
 
-def seed_profiles(db):
-    for profile in baseline_profiles(datetime.now(timezone.utc).isoformat()):
-        ident = profile["id"]
-        db.execute("INSERT OR IGNORE INTO profiles(id,payload) VALUES (?,?)", (ident, json.dumps(profile)))
+def seed_profiles(db, owner_id=LOCAL_OWNER):
+    for profile in baseline_profiles(now_iso()):
+        db.execute("INSERT OR IGNORE INTO user_profiles(owner_id,id,payload) VALUES (?,?,?)",
+                   (owner_id, profile["id"], json.dumps(profile)))
     db.commit()
 
 
-def profiles(db):
-    return [json.loads(row[0]) for row in db.execute("SELECT payload FROM profiles ORDER BY id")]
+# Accounts -----------------------------------------------------------------
+
+def insert_user(db, user_id, username, password_hash, is_guest=False):
+    try:
+        with db:
+            db.execute("INSERT INTO users(id,username,password_hash,is_guest,created_at) VALUES (?,?,?,?,?)",
+                       (user_id, username, password_hash, int(is_guest), now_iso()))
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("That username is already taken") from exc
+    seed_profiles(db, user_id)
+    return {"id": user_id, "username": username, "is_guest": is_guest}
 
 
-def profile(db, ident):
-    row = db.execute("SELECT payload FROM profiles WHERE id=?", (ident,)).fetchone()
+def user_by_name(db, username):
+    row = db.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    return dict(row) if row else None
+
+
+def save_session(db, token_hash, user_id, expires_at):
+    with db:
+        db.execute("DELETE FROM sessions WHERE expires_at < ?", (now_iso(),))
+        db.execute("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
+                   (token_hash, user_id, expires_at, now_iso()))
+
+
+def session_user(db, token_hash):
+    row = db.execute("SELECT users.id, users.username, users.is_guest FROM sessions JOIN users ON users.id=sessions.user_id "
+                     "WHERE token_hash=? AND expires_at > ?", (token_hash, now_iso())).fetchone()
+    return {"id": row["id"], "username": row["username"], "is_guest": bool(row["is_guest"])} if row else None
+
+
+def delete_session(db, token_hash):
+    with db:
+        db.execute("DELETE FROM sessions WHERE token_hash=?", (token_hash,))
+
+
+# Securities and filings ------------------------------------------------------
+
+def securities(db, owner_id=LOCAL_OWNER):
+    return [dict(row) for row in db.execute(
+        "SELECT ticker,name,sector,added_at FROM user_securities WHERE owner_id=? ORDER BY ticker", (owner_id,))]
+
+
+def add_security(db, owner_id, ticker, name, sector):
+    with db:
+        db.execute("INSERT OR REPLACE INTO user_securities(owner_id,ticker,name,sector,added_at) VALUES (?,?,?,?,?)",
+                   (owner_id, ticker, name, sector, now_iso()))
+
+
+def remove_security(db, owner_id, ticker):
+    with db:
+        removed = db.execute("DELETE FROM user_securities WHERE owner_id=? AND ticker=?", (owner_id, ticker)).rowcount
+        db.execute("DELETE FROM user_documents WHERE owner_id=? AND ticker=?", (owner_id, ticker))
+    return bool(removed)
+
+
+def universe(db, owner_id=LOCAL_OWNER) -> dict:
+    """Every ticker this owner may analyze or hold, with its sector and data mode."""
+    items = {ticker: {"name": spec["name"], "sector": spec["sector"], "mode": "SYNTHETIC"}
+             for ticker, spec in STOCKS.items()}
+    for row in securities(db, owner_id):
+        items[row["ticker"]] = {"name": row["name"], "sector": row["sector"], "mode": "LIVE"}
+    return items
+
+
+def user_documents(db, owner_id=LOCAL_OWNER, ticker=None):
+    query = "SELECT payload FROM user_documents WHERE owner_id=?" + (" AND ticker=?" if ticker else "")
+    args = (owner_id, ticker) if ticker else (owner_id,)
+    docs = [json.loads(row[0]) for row in db.execute(query, args)]
+    return sorted(docs, key=lambda doc: (doc["published_at"], doc["id"]), reverse=True)
+
+
+def save_document(db, owner_id, document):
+    with db:
+        db.execute("INSERT INTO user_documents(owner_id,id,ticker,payload) VALUES (?,?,?,?)",
+                   (owner_id, document["id"], document["ticker"], json.dumps(document, allow_nan=False)))
+
+
+def delete_document(db, owner_id, ident):
+    with db:
+        return db.execute("DELETE FROM user_documents WHERE owner_id=? AND id=?", (owner_id, ident)).rowcount > 0
+
+
+def cached_bars(db, ticker):
+    row = db.execute("SELECT payload, fetched_at FROM market_bars WHERE ticker=?", (ticker,)).fetchone()
+    return (json.loads(row[0]), row[1]) if row else (None, None)
+
+
+def cache_bars(db, ticker, bars):
+    with db:
+        db.execute("INSERT OR REPLACE INTO market_bars(ticker,payload,fetched_at) VALUES (?,?,?)",
+                   (ticker, json.dumps(bars, allow_nan=False), now_iso()))
+
+
+# Profiles -------------------------------------------------------------------
+
+def profiles(db, owner_id=LOCAL_OWNER):
+    return [json.loads(row[0]) for row in db.execute(
+        "SELECT payload FROM user_profiles WHERE owner_id=? ORDER BY id", (owner_id,))]
+
+
+def profile(db, ident, owner_id=LOCAL_OWNER):
+    row = db.execute("SELECT payload FROM user_profiles WHERE owner_id=? AND id=?", (owner_id, ident)).fetchone()
     return json.loads(row[0]) if row else None
 
 
-def update_profile(db, ident, changes):
-    row = db.execute("SELECT payload FROM profiles WHERE id=?", (ident,)).fetchone()
+def update_profile(db, ident, changes, owner_id=LOCAL_OWNER, tickers=None):
+    """Validate and save a new profile revision. `tickers` lists every holdable ticker."""
+    known = set(tickers if tickers is not None else STOCKS)
+    row = db.execute("SELECT payload FROM user_profiles WHERE owner_id=? AND id=?", (owner_id, ident)).fetchone()
     if row is None:
         return None
     current = json.loads(row[0])
@@ -109,24 +239,26 @@ def update_profile(db, ident, changes):
         raise ValueError("risk_tier is invalid")
     if not isinstance(updated["investment_horizon"], str) or updated["investment_horizon"] not in {"SHORT", "MEDIUM", "LONG"}:
         raise ValueError("investment_horizon is invalid")
-    if not isinstance(updated["watchlist"], list) or any(not isinstance(ticker, str) or ticker not in STOCKS for ticker in updated["watchlist"]) or \
+    if not isinstance(updated["watchlist"], list) or any(not isinstance(ticker, str) or ticker not in known for ticker in updated["watchlist"]) or \
             len(updated["watchlist"]) != len(set(updated["watchlist"])):
-        raise ValueError("watchlist must contain unique known synthetic tickers")
+        raise ValueError("watchlist must contain unique known tickers")
     for field in ("max_single_asset_weight", "max_sector_weight"):
         if isinstance(updated[field], bool) or not isinstance(updated[field], (float, int)) or not 0 < updated[field] <= 1 or not math.isfinite(updated[field]):
             raise ValueError(f"{field} must be a fraction in (0,1]")
-    if not isinstance(updated["positions"], list) or any(not isinstance(p, dict) or isinstance(p.get("value"), bool) or
+    if not isinstance(updated["positions"], list) or len(updated["positions"]) > 60 or \
+            any(not isinstance(p, dict) or isinstance(p.get("value"), bool) or
             not isinstance(p.get("value"), (int, float)) or p["value"] < 0 or
             p["value"] > 1_000_000_000_000 or not math.isfinite(p["value"]) or
             not isinstance(p.get("ticker"), str) or
-            p["ticker"] not in STOCKS and p["ticker"] != "CASH" for p in updated["positions"]):
-        raise ValueError("positions must contain nonnegative valued assets")
+            p["ticker"] not in known and p["ticker"] != "CASH" for p in updated["positions"]):
+        raise ValueError("positions must contain nonnegative values for known tickers or CASH")
     if len({p["ticker"] for p in updated["positions"]}) != len(updated["positions"]):
         raise ValueError("positions must have unique tickers")
+    updated["positions"] = [{"ticker": p["ticker"], "value": p["value"]} for p in updated["positions"]]
     updated["revision"] = current["revision"] + 1
-    updated["updated_at"] = datetime.now(timezone.utc).isoformat()
-    cursor = db.execute("UPDATE profiles SET payload=? WHERE id=? AND payload=?",
-                        (json.dumps(updated, allow_nan=False), ident, row[0]))
+    updated["updated_at"] = now_iso()
+    cursor = db.execute("UPDATE user_profiles SET payload=? WHERE owner_id=? AND id=? AND payload=?",
+                        (json.dumps(updated, allow_nan=False), owner_id, ident, row[0]))
     if cursor.rowcount != 1:
         db.rollback()
         raise RevisionConflict("Profile changed during save; reload before retrying")
@@ -134,25 +266,29 @@ def update_profile(db, ident, changes):
     return updated
 
 
-def save_run(db, report):
+# Runs -----------------------------------------------------------------------
+
+def save_run(db, report, owner_id=LOCAL_OWNER):
     verify_run(report)
     with db:
-        db.execute("INSERT INTO runs(id,investor_id,ticker,created_at,payload) VALUES (?,?,?,?,?)",
-                   (report["run_id"], report["investor_id"], report["ticker"], report["created_at"], json.dumps(report, allow_nan=False)))
+        db.execute("INSERT INTO runs(id,investor_id,ticker,created_at,payload,owner_id) VALUES (?,?,?,?,?,?)",
+                   (report["run_id"], report["investor_id"], report["ticker"], report["created_at"],
+                    json.dumps(report, allow_nan=False), owner_id))
 
 
-def run(db, ident):
-    row = db.execute("SELECT payload FROM runs WHERE id=?", (ident,)).fetchone()
+def run(db, ident, owner_id=LOCAL_OWNER):
+    row = db.execute("SELECT payload FROM runs WHERE id=? AND owner_id=?", (ident, owner_id)).fetchone()
     return verify_run(json.loads(row[0])) if row else None
 
 
-def all_runs(db):
-    return [verify_run(json.loads(row[0])) for row in db.execute("SELECT payload FROM runs ORDER BY created_at DESC")]
+def all_runs(db, owner_id=LOCAL_OWNER):
+    return [verify_run(json.loads(row[0])) for row in db.execute(
+        "SELECT payload FROM runs WHERE owner_id=? ORDER BY created_at DESC", (owner_id,))]
 
 
-def recent_runs(db, investor_id=None, limit=20, offset=0):
-    where = " WHERE investor_id=?" if investor_id else ""
-    args = (investor_id,) if investor_id else ()
+def recent_runs(db, investor_id=None, limit=20, offset=0, owner_id=LOCAL_OWNER):
+    where = " WHERE owner_id=?" + (" AND investor_id=?" if investor_id else "")
+    args = (owner_id, investor_id) if investor_id else (owner_id,)
     total = db.execute("SELECT COUNT(*) FROM runs" + where, args).fetchone()[0]
     rows = db.execute("SELECT payload FROM runs" + where + " ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",
                       (*args, limit, offset))
