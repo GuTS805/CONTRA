@@ -157,6 +157,27 @@ class DemoTests(unittest.TestCase):
         self.assertNotIn("E-FAKE", report["agents"]["research"]["evidence_ids"])
         self.assertTrue(all("E-FAKE" not in fact["source_ids"] for fact in report["agents"]["research"]["facts"]))
 
+    def test_valid_market_bar_cannot_be_used_as_research_citation(self):
+        from contra.core import research_agent as real_research_agent
+        from contra.fixtures import bars_for
+        bar_id = bars_for("ALPHA.NS")[-1]["id"]
+        def invalid_research(signal, chunks):
+            result = real_research_agent(signal, chunks)
+            result["facts"].append({"key": "misattributed", "value": "A bar is not a filing", "source_ids": [bar_id]})
+            result["evidence_ids"].append(bar_id)
+            return result
+        with patch("contra.core.research_agent", side_effect=invalid_research), \
+             patch("contra.core.llm.configured", return_value=True), \
+             patch("contra.core.llm.reason", return_value={"model_version": "mock"}) as model_reason:
+            report = self.analyze("ALPHA.NS")
+        research = report["agents"]["research"]
+        self.assertEqual(research["status"], "PARTIAL")
+        self.assertEqual(research["execution_mode"], "DETERMINISTIC_FALLBACK")
+        self.assertNotIn(bar_id, research["evidence_ids"])
+        self.assertTrue(all(bar_id not in fact["source_ids"] for fact in research["facts"]))
+        self.assertEqual(report["metrics"]["citation_fabrication_count"], 1)
+        self.assertNotIn("RESEARCH", [call.args[0] for call in model_reason.call_args_list])
+
 
 if __name__ == "__main__":
     unittest.main()

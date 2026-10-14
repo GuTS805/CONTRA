@@ -182,7 +182,7 @@ def filing_signal(snapshot: dict, retrieved: list[dict]) -> dict:
             "warning": "At least one cited filing is over 120 days old" if stale else None}
 
 
-async def timed_agent(name: str, compute, use_model: bool = True):
+async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: set[str] | None = None):
     start = stamp()
     clock = perf_counter()
     execution_mode = "DETERMINISTIC_FALLBACK"
@@ -192,7 +192,11 @@ async def timed_agent(name: str, compute, use_model: bool = True):
         # overlap; asyncio.gather controls their common run and timeout boundary.
         result = await asyncio.to_thread(compute)
         validate_agent_payload(name, result)
-        if use_model and llm.configured() and result["status"] in ("OK", "PARTIAL"):
+        sources_valid = eligible_ids is None or (set(result["evidence_ids"]) <= eligible_ids and
+            all(set(fact["source_ids"]) <= eligible_ids for fact in result["facts"]))
+        if not sources_valid:
+            result["warnings"].append("Agent cited a source outside its eligible evidence set")
+        if sources_valid and use_model and llm.configured() and result["status"] in ("OK", "PARTIAL"):
             try:
                 model_metadata = await asyncio.to_thread(llm.reason, name, result)
                 execution_mode = "LLM_REASONED"
@@ -309,9 +313,11 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     def parallel(work):
         start_gate.wait(timeout=1)
         return work()
-    tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm),
-             timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm),
-             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker)), allow_llm)]
+    allowed_by_agent = {"market": {bar["id"] for bar in snapshot["bars"]},
+                        "research": {doc["id"] for doc in retrieved}, "risk": {profile["id"]}}
+    tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"]),
+             timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"]),
+             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker)), allow_llm, allowed_by_agent["risk"])]
     outcomes = await asyncio.gather(*(asyncio.wait_for(task, timeout=10 if allow_llm and llm.configured() else 2) for task in tasks), return_exceptions=True)
     agents = {}
     for key, outcome in zip(("market", "research", "risk"), outcomes):
@@ -321,12 +327,12 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
                        "warnings": [type(outcome).__name__], "started_at": stamp(), "finished_at": stamp(),
                        "latency_ms": None, "execution_mode": "DETERMINISTIC_FALLBACK", "method_version": METHOD_VERSION}
         agents[key] = outcome
-    allowed = {d["id"] for d in retrieved} | {b["id"] for b in snapshot["bars"]} | {profile["id"]}
     raw_research_citations = list(dict.fromkeys(agents["research"]["evidence_ids"] +
         [source_id for fact in agents["research"]["facts"] for source_id in fact["source_ids"]]))
-    retrieved_ids = {doc["id"] for doc in retrieved}
+    retrieved_ids = allowed_by_agent["research"]
     invalid_research_citations = sum(source_id not in retrieved_ids for source_id in raw_research_citations)
-    for agent in agents.values():
+    for name, agent in agents.items():
+        allowed = allowed_by_agent[name]
         original_ids = agent["evidence_ids"]
         original_facts = agent["facts"]
         agent["evidence_ids"] = [source_id for source_id in original_ids if source_id in allowed]
