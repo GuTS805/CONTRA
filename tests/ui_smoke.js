@@ -36,6 +36,20 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  assert.equal(document.activeElement,element('#compare'));
  await vm.runInContext('evaluation()',context);
  assert(element('#view').innerHTML.includes('Scenario matrix'));
+ const liveFetch=context.fetch;
+ let releaseEvaluation;
+ context.fetch=(path,options)=>path==='/v1/evaluations/summary'
+   ? new Promise(resolve=>{releaseEvaluation=()=>resolve(liveFetch(path,options))})
+   : liveFetch(path,options);
+ context.location.pathname='/evaluation';
+ await vm.runInContext('render()',context);
+ assert.equal(typeof releaseEvaluation,'function');
+ context.location.pathname='/';
+ await vm.runInContext('render()',context);
+ releaseEvaluation();
+ await new Promise(resolve=>setTimeout(resolve,50));
+ assert(element('#view').innerHTML.includes('Start an analysis'), 'Stale evaluation must not replace terminal');
+ context.fetch=liveFetch;
  context.location.pathname='/evidence';
  await vm.runInContext('render()',context);
  assert(element('#view').innerHTML.includes('Synthetic filing excerpts'));

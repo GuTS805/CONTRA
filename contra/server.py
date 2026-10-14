@@ -28,6 +28,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(data)
 
@@ -47,7 +50,26 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, status, code, message):
         self._send(status, {"error": code, "message": message})
 
+    def _trusted_request(self, mutation=False):
+        """Keep the unauthenticated demo on its own loopback origin."""
+        host = self.headers.get("Host", "")
+        expected = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+        if host not in expected:
+            self._error(403, "INVALID_HOST", "This local demo accepts only its loopback host")
+            return False
+        if mutation:
+            origin = self.headers.get("Origin")
+            if origin is not None and origin not in {f"http://{item}" for item in expected}:
+                self._error(403, "INVALID_ORIGIN", "Cross-origin changes are not allowed")
+                return False
+            if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+                self._error(415, "UNSUPPORTED_MEDIA_TYPE", "JSON Content-Type is required")
+                return False
+        return True
+
     def do_GET(self):
+        if not self._trusted_request():
+            return
         try:
             return self._do_GET()
         except RunIntegrityError as exc:
@@ -166,6 +188,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._error(404, "NOT_FOUND", "Unknown route")
 
     def do_POST(self):
+        if not self._trusted_request(mutation=True):
+            return
         if urlparse(self.path).path != "/v1/analyses":
             return self._error(404, "NOT_FOUND", "Unknown route")
         try:
@@ -194,6 +218,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._error(400, "BAD_INPUT", str(exc))
 
     def do_PUT(self):
+        if not self._trusted_request(mutation=True):
+            return
         path = urlparse(self.path).path
         if not path.startswith("/v1/profiles/") or len(path.split("/")) != 4:
             return self._error(404, "NOT_FOUND", "Unknown route")
@@ -212,6 +238,8 @@ def main():
     with connect():
         pass
     host = os.environ.get("CONTRA_HOST", "127.0.0.1")
+    if host not in {"127.0.0.1", "localhost"}:
+        raise ValueError("The unauthenticated demo may bind only to 127.0.0.1 or localhost")
     port = int(os.environ.get("CONTRA_PORT", "8000"))
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"CONTRA synthetic demo: http://{host}:{port}", flush=True)

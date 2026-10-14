@@ -54,6 +54,25 @@ class HttpTests(unittest.TestCase):
         with urlopen(request, timeout=5) as response:
             return response.status, json.load(response)
 
+    def test_loopback_origin_and_json_guards(self):
+        cases = [
+            ("GET", "/health", None, {"Host": "attacker.example"}, 403, "INVALID_HOST"),
+            ("POST", "/v1/analyses", b"{}", {"Content-Type": "application/json", "Origin": "https://attacker.example"}, 403, "INVALID_ORIGIN"),
+            ("PUT", "/v1/profiles/demo_growth", b"{}", {"Content-Type": "text/plain"}, 415, "UNSUPPORTED_MEDIA_TYPE"),
+        ]
+        for method, path, body, headers, expected, code in cases:
+            with self.subTest(code=code):
+                request = Request(self.base + path, data=body, method=method, headers=headers)
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                self.assertEqual(caught.exception.code, expected)
+                self.assertEqual(json.load(caught.exception)["error"], code)
+        status, health = self.request_json("/health")
+        self.assertEqual((status, health["status"]), (200, "ok"))
+        with urlopen(self.base + "/", timeout=5) as response:
+            self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+            self.assertIn("frame-ancestors 'none'", response.headers["Content-Security-Policy"])
+
     def test_analysis_replay_evidence_and_measured_evaluation(self):
         _, catalog = self.request_json("/v1/stocks")
         self.assertLess(catalog["stocks"][0]["first_date"], catalog["as_of"])
@@ -128,7 +147,7 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 404)
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         try:
-            connection.request("POST", "/v1/analyses", body=b"", headers={"Content-Length": "-1"})
+            connection.request("POST", "/v1/analyses", body=b"", headers={"Content-Length": "-1", "Content-Type": "application/json"})
             response = connection.getresponse()
             self.assertEqual(response.status, 400)
             self.assertEqual(json.load(response)["error"], "BAD_INPUT")
