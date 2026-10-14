@@ -148,3 +148,12 @@ def run(db, ident):
 
 def all_runs(db):
     return [verify_run(json.loads(row[0])) for row in db.execute("SELECT payload FROM runs ORDER BY created_at DESC")]
+
+
+def recent_runs(db, investor_id=None, limit=20, offset=0):
+    where = " WHERE investor_id=?" if investor_id else ""
+    args = (investor_id,) if investor_id else ()
+    total = db.execute("SELECT COUNT(*) FROM runs" + where, args).fetchone()[0]
+    rows = db.execute("SELECT payload FROM runs" + where + " ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",
+                      (*args, limit, offset))
+    return [verify_run(json.loads(row[0])) for row in rows], total

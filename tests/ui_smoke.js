@@ -4,7 +4,7 @@ const assert=require('assert');
 const base=process.env.CONTRA_BASE_URL||'http://127.0.0.1:8000';
 const elements=new Map();
 const listeners={};
-function element(key){if(!elements.has(key))elements.set(key,{innerHTML:'',textContent:'',hidden:false,isConnected:true,onclick:null,onchange:null,value:'',attributes:{},setAttribute(name,value){this.attributes[name]=value},getAttribute(name){return this.attributes[name]},focus(){document.activeElement=this},contains(child){return key==='#drawer'&&child===element('#drawer .drawer-close')},querySelectorAll(){return key==='#drawer'?[element('#drawer .drawer-close')]:[]}});return elements.get(key)}
+function element(key){if(!elements.has(key))elements.set(key,{innerHTML:'',textContent:'',hidden:false,isConnected:true,onclick:null,onchange:null,value:'',attributes:{},setAttribute(name,value){this.attributes[name]=value},getAttribute(name){return this.attributes[name]},focus(){document.activeElement=this},contains(child){return key==='#drawer'&&child===element('#drawer .drawer-close')},querySelector(){return null},querySelectorAll(){return key==='#drawer'?[element('#drawer .drawer-close')]:[]}});return elements.get(key)}
 const document={querySelector:element,querySelectorAll(){return []},addEventListener(type,callback){listeners[type]=callback},activeElement:null};
 const context={document,window:{},history:{pushState(_,__,path){context.location.pathname=path}},location:{pathname:'/'},fetch:(path,options)=>fetch(base+path,options),console,alert:message=>{throw Error(message)}};
 vm.createContext(context);
@@ -17,6 +17,8 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  await vm.runInContext('render()',context);
  assert(element('#view').innerHTML.includes('Start an analysis'));
  const first=await analysis('demo_conservative');context.first=first;
+ await vm.runInContext('loadRecent()',context);
+ assert(element('#recent-runs').innerHTML.includes('saved runs'));
  vm.runInContext('state.report=first;reportView(first)',context);
  assert(element('#view').innerHTML.includes('Simulated price path'));
  assert(element('#view').innerHTML.includes('Download JSON'));

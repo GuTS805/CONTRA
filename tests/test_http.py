@@ -149,6 +149,20 @@ class HttpTests(unittest.TestCase):
         self.assertTrue(report["synthesis"]["suitability_breach"])
         self.assertEqual(report["investor_snapshot"]["positions"], positions)
 
+    def test_history_pagination_and_limits(self):
+        for _ in range(3):
+            self.request_json("/v1/analyses", "POST", {"ticker": "GAMMA.NS", "investor_id": "demo_growth"})
+        _, first = self.request_json("/v1/analyses?investor_id=demo_growth&limit=2&offset=0")
+        _, second = self.request_json("/v1/analyses?investor_id=demo_growth&limit=2&offset=2")
+        self.assertEqual((first["count"], first["total"], first["has_more"]), (2, 3, True))
+        self.assertEqual((second["count"], second["total"], second["has_more"]), (1, 3, False))
+        self.assertFalse({item["run_id"] for item in first["runs"]} &
+                         {item["run_id"] for item in second["runs"]})
+        for query in ("limit=0", "limit=101", "offset=-1", "limit=abc", "offset=9223372036854775808"):
+            with self.subTest(query=query), self.assertRaises(HTTPError) as raised:
+                self.request_json("/v1/analyses?" + query)
+            self.assertEqual(raised.exception.code, 400)
+
     def test_saved_report_corruption_is_detected_on_replay(self):
         _, report = self.request_json("/v1/analyses", "POST",
                                       {"ticker": "GAMMA.NS", "investor_id": "demo_growth"})

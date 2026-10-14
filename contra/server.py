@@ -14,7 +14,7 @@ from .core import analyze, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
 from .llm import configured as llm_configured
-from .store import RunIntegrityError, RevisionConflict, baseline_profiles, connect, profiles, profile, update_profile, save_run, run, all_runs
+from .store import RunIntegrityError, RevisionConflict, baseline_profiles, connect, profiles, profile, update_profile, save_run, run, all_runs, recent_runs
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -76,16 +76,23 @@ class Handler(BaseHTTPRequestHandler):
                 item = profile(db, ident)
             return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Unknown investor")
         if path == "/v1/analyses":
-            investor = parse_qs(urlparse(self.path).query).get("investor_id", [None])[0]
+            params = parse_qs(urlparse(self.path).query)
+            investor = params.get("investor_id", [None])[0]
+            try:
+                limit = int(params.get("limit", [20])[0])
+                offset = int(params.get("offset", [0])[0])
+            except ValueError:
+                return self._error(400, "BAD_INPUT", "limit and offset must be integers")
+            if not 1 <= limit <= 100 or not 0 <= offset <= 9_223_372_036_854_775_807:
+                return self._error(400, "BAD_INPUT", "limit must be 1-100 and offset must fit a nonnegative SQLite integer")
             with connect() as db:
-                reports = all_runs(db)
-            if investor:
-                reports = [report for report in reports if report["investor_id"] == investor]
+                reports, total = recent_runs(db, investor, limit, offset)
             summaries = [{"run_id": report["run_id"], "ticker": report["ticker"],
                           "investor_id": report["investor_id"], "created_at": report["created_at"],
                           "as_of": report["as_of"], "state": report["synthesis"]["state"],
-                          "data_mode": report["data_mode"]} for report in reports[:20]]
-            return self._send(200, {"runs": summaries, "count": len(summaries)})
+                          "data_mode": report["data_mode"]} for report in reports]
+            return self._send(200, {"runs": summaries, "count": len(summaries), "total": total,
+                                    "limit": limit, "offset": offset, "has_more": offset + len(summaries) < total})
         if path.startswith("/v1/analyses/") and "/evidence/" in path:
             parts = path.split("/")
             if len(parts) != 6 or parts[4] != "evidence":

@@ -23,15 +23,24 @@ function terminal(){
   $('#run').onclick=runAnalysis; document.querySelectorAll('[data-select],[data-scenario]').forEach(b=>b.onclick=()=>{state.ticker=b.dataset.select||b.dataset.scenario;$('#ticker').value=state.ticker;$('#ticker').focus()});
   loadRecent();
 }
-async function loadRecent(){
+async function loadRecent(offset=0){
   const target=$('#recent-runs');
   if(!target)return;
-  try {
-    const data=await api('/v1/analyses');
+  if(offset===0)state.recentRuns=[];
+  try{
+    const data=await api('/v1/analyses?limit=10&offset='+offset);
     if(!target.isConnected)return;
-    target.innerHTML=data.runs.length?`<div class="recent-list">${data.runs.map(run=>`<button class="recent-row" data-run="${esc(run.run_id)}"><span><strong>${esc(run.ticker)}</strong><small>${esc(profileName(run.investor_id))} · ${esc(run.created_at.slice(0,16).replace('T',' '))} UTC</small></span>${badge(run.state)}<span class="muted">OPEN →</span></button>`).join('')}</div>`:'<div class="empty">No saved analyses yet. Run one above to create the first audit record.</div>';
+    state.recentRuns.push(...data.runs);
+    const rows=state.recentRuns.map(run=>`<button class="recent-row" data-run="${esc(run.run_id)}"><span><strong>${esc(run.ticker)}</strong><small>${esc(profileName(run.investor_id))} &middot; ${esc(run.created_at.slice(0,16).replace('T',' '))} UTC</small></span>${badge(run.state)}<span class="muted">OPEN REPORT</span></button>`).join('');
+    target.innerHTML=state.recentRuns.length?`<div class="recent-list">${rows}</div><div class="recent-footer"><span>${state.recentRuns.length} of ${data.total} saved runs</span>${data.has_more?'<button class="secondary" id="load-more-runs">Load more</button>':''}</div>`:'<div class="empty">No saved analyses yet. Run one above to create the first audit record.</div>';
     target.querySelectorAll('[data-run]').forEach(button=>button.onclick=()=>navigate('/analysis/'+button.dataset.run));
-  } catch(error) { if(target.isConnected)target.innerHTML=errorBox(error.message); }
+    const more=target.querySelector('#load-more-runs');
+    if(more)more.onclick=()=>loadRecent(state.recentRuns.length);
+  }catch(error){
+    if(!target.isConnected)return;
+    if(offset===0)target.innerHTML=errorBox(error.message);
+    else target.insertAdjacentHTML('beforeend',errorBox(error.message));
+  }
 }
 async function runAnalysis(){const button=$('#run');button.disabled=true;button.textContent='Analyzing three perspectives…';$('#run-error').innerHTML='';try{const report=await api('/v1/analyses',{method:'POST',body:JSON.stringify({ticker:state.ticker,investor_id:state.investor,dataset_id:'contra_synthetic_v1',as_of:state.asOf||state.catalog.as_of})});state.report=report;state.comparison=null;navigate('/analysis/'+report.run_id)}catch(e){$('#run-error').innerHTML=errorBox(e.message);button.disabled=false;button.textContent='Run evidence analysis →'}}
 function priceChart(bars){if(!bars||bars.length<2)return '<div class="notice">Insufficient dated bars for a price chart.</div>';const data=bars.slice(-45),values=data.map(b=>b.close),low=Math.min(...values),high=Math.max(...values),range=high-low||1;const points=values.map((v,i)=>`${(i/(values.length-1)*600).toFixed(1)},${(100-(v-low)/range*78).toFixed(1)}`).join(' ');return `<section class="card card-pad" style="margin-top:18px"><div class="section-row" style="margin:0 0 13px"><div><h2>Simulated price path</h2><div class="card-caption">Last ${data.length} dated closes from this frozen run</div></div><span class="status">SYNTHETIC</span></div><svg viewBox="0 0 600 115" width="100%" height="150" role="img" aria-label="Synthetic closing price trend"><line x1="0" y1="101" x2="600" y2="101" stroke="#dce7e3"/><polyline points="${points}" fill="none" stroke="#2d9d7a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="signal-bottom"><span>${esc(data[0].trade_date)} · ${num(data[0].close)}</span><span>${esc(data[data.length-1].trade_date)} · ${num(data[data.length-1].close)}</span></div></section>`}
