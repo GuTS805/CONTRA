@@ -32,8 +32,13 @@ Scope: the supplied architecture blueprint and the current synthetic, localhost 
 - **P2, resolved — `web/app.js`:** a benchmark response could arrive after leaving Evaluation and write into a missing result element, creating an unhandled client error. The benchmark now ignores results and failures from a prior render. `tests/ui_smoke.js` delays the response, navigates away, and waits for the action to settle without replacing the terminal.
 - **Verification:** all 28 Python tests and the UI runtime smoke still pass after this change.
 
+### Cycle 4: evidence drawer freshness
+
+- **P2, resolved — `web/app.js`:** a late evidence response could reopen the drawer after navigation. Source details and errors now appear only while their originating render is current. The UI smoke delays a source request, navigates away, and confirms the drawer stays closed.
+- **Verification:** 28 Python tests, JavaScript syntax check and UI runtime smoke pass. No new high-impact local issue was found in this pass; public-use gaps below remain.
+
 ### Current highest-impact gaps
 
 1. **P1 for real-world use — data and provenance:** `contra/fixtures.py`, `contra/core.py`, `contra/import_data.py`. Imported snapshots are validated and staged, but analysis still uses synthetic fixtures. Licensed feeds, issuer filing verification and a trustworthy interpretation method are not implemented.
 2. **P1 for public use — identity and deployment:** `contra/server.py`, `contra/store.py`. The server is intentionally local and unauthenticated. Hosted access requires an identity model, access controls and durable storage.
-3. **P2 — broader client verification:** `web/app.js`, `web/style.css`. The current smoke harness covers main page rendering and two navigation races. A full browser journey across the report, portfolio edit and error states would give stronger confidence.
+3. **P2 — broader client verification:** `web/app.js`, `web/style.css`. The current smoke harness covers main page rendering and three navigation races. A full browser journey across the report, portfolio edit and error states would give stronger confidence.

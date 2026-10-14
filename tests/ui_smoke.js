@@ -34,6 +34,19 @@ async function analysis(investor){const response=await fetch(base+'/v1/analyses'
  assert(tabPrevented);
  listeners.keydown({key:'Escape'});
  assert.equal(document.activeElement,element('#compare'));
+ const originalFetch=context.fetch;
+ let releaseEvidence;
+ const delayedId=first.evidence[0].id;
+ context.fetch=(path,options)=>path.endsWith('/'+delayedId)
+   ? new Promise(resolve=>{releaseEvidence=()=>resolve(originalFetch(path,options))})
+   : originalFetch(path,options);
+ const evidenceTask=vm.runInContext(`openEvidence('${delayedId}')`,context);
+ assert.equal(typeof releaseEvidence,'function');
+ await vm.runInContext('render()',context);
+ releaseEvidence();
+ await evidenceTask;
+ assert.equal(element('#drawer').getAttribute('aria-hidden'),'true');
+ context.fetch=originalFetch;
  await vm.runInContext('evaluation()',context);
  assert(element('#view').innerHTML.includes('Scenario matrix'));
  const liveFetch=context.fetch;
