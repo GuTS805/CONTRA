@@ -61,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
             with connect() as db:
                 result = profiles(db)
             return self._send(200, {"profiles": result})
-        if path.startswith("/v1/profiles/") and path.endswith("/portfolio"):
+        if path.startswith("/v1/profiles/") and path.endswith("/portfolio") and len(path.split("/")) == 5:
             ident = path.split("/")[3]
             with connect() as db:
                 item = profile(db, ident)
@@ -92,6 +92,8 @@ class Handler(BaseHTTPRequestHandler):
             item = next((entry for entry in candidates if entry["id"] == evidence_id), None)
             return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Evidence is not in this run")
         if path.startswith("/v1/analyses/"):
+            if len(path.split("/")) != 4:
+                return self._error(404, "NOT_FOUND", "Unknown route")
             with connect() as db:
                 item = run(db, path.split("/")[3])
             return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Unknown run")
@@ -110,6 +112,8 @@ class Handler(BaseHTTPRequestHandler):
                      and (as_of is None or doc["published_at"] <= as_of)]
             return self._send(200, {"documents": items, "count": len(items)})
         if path.startswith("/v1/evidence/"):
+            if len(path.split("/")) != 4:
+                return self._error(404, "NOT_FOUND", "Unknown route")
             ident = path.split("/")[3]
             item = next((d for d in documents() if d["id"] == ident), None)
             if item is None and ident.startswith("BAR-"):
@@ -175,7 +179,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         path = urlparse(self.path).path
-        if not path.startswith("/v1/profiles/"):
+        if not path.startswith("/v1/profiles/") or len(path.split("/")) != 4:
             return self._error(404, "NOT_FOUND", "Unknown route")
         try:
             changes = self._json()

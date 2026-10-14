@@ -116,6 +116,9 @@ class HttpTests(unittest.TestCase):
             self.request_json("/v1/profiles/demo_growth", "PUT",
                               {"positions": [{"ticker": "ALPHA.NS", "value": 10 ** 1000}]})
         self.assertEqual(raised.exception.code, 400)
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("/v1/analyses/not-a-run/extra")
+        self.assertEqual(raised.exception.code, 404)
 
 
 if __name__ == "__main__":
