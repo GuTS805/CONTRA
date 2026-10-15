@@ -1,0 +1,334 @@
+{
+ "generated_at": "2026-10-15T14:56:46+00:00",
+ "parameters": {
+  "universe": [
+   "RELIANCE.NS",
+   "TCS.NS",
+   "HDFCBANK.NS",
+   "ICICIBANK.NS",
+   "INFY.NS",
+   "HINDUNILVR.NS",
+   "ITC.NS",
+   "SBIN.NS",
+   "BHARTIARTL.NS",
+   "KOTAKBANK.NS",
+   "LT.NS",
+   "AXISBANK.NS",
+   "ASIANPAINT.NS",
+   "MARUTI.NS",
+   "SUNPHARMA.NS",
+   "TITAN.NS",
+   "NTPC.NS",
+   "ULTRACEMCO.NS",
+   "NESTLEIND.NS",
+   "POWERGRID.NS"
+  ],
+  "history_range": "5y",
+  "horizon_sessions": 21,
+  "stride_sessions": 21,
+  "development_share": 0.7,
+  "split_date": "2025-09-12",
+  "max_daily_move_excluded": 0.3,
+  "permutations": 5000,
+  "seed": 42,
+  "signal": "numeric_signals momentum label (±3% over 20 sessions), computed from bars up to each date"
+ },
+ "excluded_windows_with_data_artefacts": 0,
+ "all": {
+  "observations": 1140,
+  "directional": 689,
+  "coverage": 0.6044,
+  "hits": 316,
+  "hit_rate": 0.4586,
+  "hit_rate_ci95": [
+   0.4218,
+   0.496
+  ],
+  "always_bullish_hit_rate": 0.5196,
+  "always_bearish_hit_rate": 0.4804,
+  "permutation_p_value": 0.9898,
+  "mean_forward_return": {
+   "BULLISH": {
+    "n": 386,
+    "mean": 0.0025
+   },
+   "NEUTRAL": {
+    "n": 451,
+    "mean": 0.00812
+   },
+   "BEARISH": {
+    "n": 303,
+    "mean": 0.01209
+   }
+  },
+  "bullish_minus_bearish": -0.00959,
+  "volume_participation": {
+   "elevated": {
+    "n": 183,
+    "mean_abs_forward": 0.051
+   },
+   "ordinary": {
+    "n": 725,
+    "mean_abs_forward": 0.04774
+   }
+  }
+ },
+ "development": {
+  "observations": 901,
+  "directional": 545,
+  "coverage": 0.6049,
+  "hits": 258,
+  "hit_rate": 0.4734,
+  "hit_rate_ci95": [
+   0.4318,
+   0.5154
+  ],
+  "always_bullish_hit_rate": 0.5339,
+  "always_bearish_hit_rate": 0.4661,
+  "permutation_p_value": 0.9272,
+  "mean_forward_return": {
+   "BULLISH": {
+    "n": 311,
+    "mean": 0.00599
+   },
+   "NEUTRAL": {
+    "n": 356,
+    "mean": 0.01342
+   },
+   "BEARISH": {
+    "n": 234,
+    "mean": 0.01123
+   }
+  },
+  "bullish_minus_bearish": -0.00524,
+  "volume_participation": {
+   "elevated": {
+    "n": 158,
+    "mean_abs_forward": 0.05024
+   },
+   "ordinary": {
+    "n": 587,
+    "mean_abs_forward": 0.04821
+   }
+  }
+ },
+ "held_out": {
+  "observations": 239,
+  "directional": 144,
+  "coverage": 0.6025,
+  "hits": 58,
+  "hit_rate": 0.4028,
+  "hit_rate_ci95": [
+   0.3262,
+   0.4844
+  ],
+  "always_bullish_hit_rate": 0.4653,
+  "always_bearish_hit_rate": 0.5347,
+  "permutation_p_value": 0.9934,
+  "mean_forward_return": {
+   "BULLISH": {
+    "n": 75,
+    "mean": -0.01197
+   },
+   "NEUTRAL": {
+    "n": 95,
+    "mean": -0.01172
+   },
+   "BEARISH": {
+    "n": 69,
+    "mean": 0.01502
+   }
+  },
+  "bullish_minus_bearish": -0.02699,
+  "volume_participation": {
+   "elevated": {
+    "n": 25,
+    "mean_abs_forward": 0.05582
+   },
+   "ordinary": {
+    "n": 138,
+    "mean_abs_forward": 0.04574
+   }
+  }
+ },
+ "held_out_majority_baseline": {
+  "guess": "UP",
+  "n": 144,
+  "hit_rate": 0.4653
+ },
+ "hit_rate_by_year": {
+  "2021": {
+   "directional": 25,
+   "hit_rate": 0.32
+  },
+  "2022": {
+   "directional": 169,
+   "hit_rate": 0.4615
+  },
+  "2023": {
+   "directional": 132,
+   "hit_rate": 0.5
+  },
+  "2024": {
+   "directional": 130,
+   "hit_rate": 0.5385
+  },
+  "2025": {
+   "directional": 131,
+   "hit_rate": 0.4122
+  },
+  "2026": {
+   "directional": 102,
+   "hit_rate": 0.3922
+  }
+ },
+ "sources": [
+  {
+   "ticker": "RELIANCE.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "a3930b04ce68565cc5ce1b0ad61959cc8e759b186d9438e78890533de44a5eed"
+  },
+  {
+   "ticker": "TCS.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "c92121eac10cc86d7bb5f474a93336a6746d00daa4ea62da620ae0bd98e9f5ee"
+  },
+  {
+   "ticker": "HDFCBANK.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "259dc0a7b55921ce38776ca9eea500eaebe95434ae77170d75b1bfb7543f4b78"
+  },
+  {
+   "ticker": "ICICIBANK.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "d23491c8f97bb2a55f99f22c1ba776f55252fe8bc6c0f5a3be75d65c4a540bb7"
+  },
+  {
+   "ticker": "INFY.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "d2a2d7ac644a333553c2739683ad5034ad82b91df05e9493e5ab494b54c93f68"
+  },
+  {
+   "ticker": "HINDUNILVR.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "01dd3be5430169b64862f1d94642e51863daa9b4e84d6c8e88f9601a92323cf5"
+  },
+  {
+   "ticker": "ITC.NS",
+   "bars": 1235,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "d4199e5c70872deaf153252d06ec41077ff35e3f9e8a0b5c363a99e903b00699"
+  },
+  {
+   "ticker": "SBIN.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "b1b37b40347a9a1b9d8781be4ba24ed33881a76c4fe608994a0509b287768f84"
+  },
+  {
+   "ticker": "BHARTIARTL.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "d6893f2dddbaeaf1f2bb58ed4f36f1b715c4ccce35fc7e6b8aa1cc9abb96665e"
+  },
+  {
+   "ticker": "KOTAKBANK.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "185cfe32062cd60deb9805a8505838bc1e902c65b8b141a95bfd785698feffc8"
+  },
+  {
+   "ticker": "LT.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "db78671d0fc591985820f410f730f42afe6f862d108dab9a3ea832fe993b4ff2"
+  },
+  {
+   "ticker": "AXISBANK.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "5e2299cc732776cecc2bef5b00b10cecb3d56ecb176849b0f6c7a94dd56ada0d"
+  },
+  {
+   "ticker": "ASIANPAINT.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "2409989465194c35f8d918aa3b0475ca73fd2a30822a3ea28003f19a335eb5b5"
+  },
+  {
+   "ticker": "MARUTI.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "ba035f02c90ea890db051b63fc320ec286c88485c84c74b469a95831cead5093"
+  },
+  {
+   "ticker": "SUNPHARMA.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "94adc03051710b5129023e45ae387197996f9eabd8bff3a94418060e82dfbde1"
+  },
+  {
+   "ticker": "TITAN.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "44d029b4edb796d557fba5b5f3118467a79f95ee8973ff91a60d9475c641c84f"
+  },
+  {
+   "ticker": "NTPC.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "03f6f3b87afd575522e358a1a1924b9cb589be586f5ba8c27e8c2d82faf613e1"
+  },
+  {
+   "ticker": "ULTRACEMCO.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "dd684fb492c901fd09479f44c9681cf300fbbdc5c6a2834f6e9eac425b99e7a6"
+  },
+  {
+   "ticker": "NESTLEIND.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "22f46fc44becfe8f7dd9f0d3984373007688c6d9219201a0b56df83a7246dd92"
+  },
+  {
+   "ticker": "POWERGRID.NS",
+   "bars": 1234,
+   "first": "2021-10-18",
+   "last": "2026-10-15",
+   "closes_sha256": "22b8655c93b63cd993980c027948f4a20676fd62d72726db30e9161e50d27a7d"
+  }
+ ],
+ "caveats": [
+  "Only the Market agent's price momentum and volume are tested. Filing tone and institutional flows are not, because CONTRA holds no point-in-time archive of them.",
+  "The universe is 20 NSE large caps chosen because they trade today, so survivorship bias flatters any result.",
+  "Closes come from Yahoo Finance's unofficial endpoint and are not adjusted for dividends. No trading costs, slippage or position sizing are modelled.",
+  "Observations are non-overlapping per symbol, but stocks move together in the same months, so the confidence intervals are narrower than the true uncertainty.",
+  "The thresholds (±3% over 20 sessions) were fixed before this run and were not tuned on it. A hit rate close to the base rate means no demonstrated predictive edge. CONTRA's signals are descriptive."
+ ]
+}

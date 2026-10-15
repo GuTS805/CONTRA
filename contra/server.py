@@ -26,6 +26,7 @@ from .store import RunIntegrityError, RevisionConflict, baseline_profiles
 WEB = Path(__file__).resolve().parent.parent / "web"
 WARM_CACHE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "model_cache.json"
 WARM_EMBEDDINGS = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "embedding_cache.json"
+BACKTEST_REPORT = Path(__file__).resolve().parent.parent / "docs" / "evaluation" / "backtest.json"
 LOOPBACK = {"127.0.0.1", "localhost"}
 MAX_SECURITIES = 20
 MAX_DOCUMENTS = 200
@@ -279,6 +280,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Unknown evidence")
             if path == "/v1/evaluations/summary":
                 runs = store.all_runs(db, owner)
+            elif path == "/v1/evaluations/backtest":
+                if not BACKTEST_REPORT.is_file():
+                    return self._error(404, "NOT_FOUND", "No backtest report has been generated; run python -m contra.backtest")
+                return self._send(200, json.loads(BACKTEST_REPORT.read_text(encoding="utf-8")))
             elif path == "/v1/evaluations/benchmark":
                 if self._limited("bench:" + owner, 10, 600):
                     return

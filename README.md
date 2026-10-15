@@ -127,7 +127,7 @@ The server checks model-written claims against permitted facts, supporting quote
 
 ## Evaluation
 
-The **Evaluation** view runs five synthetic scenario checks, seven degraded-input checks, citation and retrieval checks, and a ten-run in-process latency benchmark with p50 and p95. The Python suite and browser smoke test cover the implementation separately:
+The **Evaluation** view also shows a walk-forward backtest of the price signals on about five years of real history for 20 NSE large caps (`python -m contra.backtest`). The result is that the directional labels did **not** beat a simple baseline (45.9% right, against 52.0% for always guessing up), so CONTRA's signals are described as descriptive, not predictive. It runs five synthetic scenario checks, seven degraded-input checks, citation and retrieval checks, and a ten-run in-process latency benchmark with p50 and p95. The Python suite and browser smoke test cover the implementation separately:
 
 ```powershell
 python -m unittest discover -s tests -v

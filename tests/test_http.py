@@ -369,6 +369,15 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 400)
 
 
+    def test_backtest_report_is_served_to_signed_in_users(self):
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(self.base + "/v1/evaluations/backtest", timeout=5)
+        self.assertEqual(raised.exception.code, 401)
+        _, report = self.request_json("/v1/evaluations/backtest")
+        self.assertIn("held_out", report)
+        self.assertEqual(report["parameters"]["horizon_sessions"], 21)
+        self.assertTrue(any("survivorship" in caveat.lower() for caveat in report["caveats"]))
+
     def test_public_filings_example(self):
         user = self.session()
         _, me = self.request_json("/v1/auth/me", opener=user)
