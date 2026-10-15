@@ -56,6 +56,7 @@ def _migrate(db: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS user_documents (owner_id TEXT NOT NULL, id TEXT NOT NULL, ticker TEXT NOT NULL,
             payload TEXT NOT NULL, PRIMARY KEY (owner_id, id));
         CREATE TABLE IF NOT EXISTS market_bars (ticker TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS llm_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL);
     """)
     columns = {row[1] for row in db.execute("PRAGMA table_info(runs)")}
     if "owner_id" not in columns:
@@ -197,6 +198,34 @@ def cache_bars(db, ticker, bars):
     with db:
         db.execute("INSERT OR REPLACE INTO market_bars(ticker,payload,fetched_at) VALUES (?,?,?)",
                    (ticker, json.dumps(bars, allow_nan=False), now_iso()))
+
+
+class ModelCache:
+    """Durable store for validated model answers, keyed by a hash of model, prompt and input facts."""
+
+    def get(self, key):
+        db = connect()
+        try:
+            row = db.execute("SELECT payload FROM llm_cache WHERE key=?", (key,)).fetchone()
+            return json.loads(row[0]) if row else None
+        finally:
+            db.close()
+
+    def put(self, key, answer):
+        db = connect()
+        try:
+            with db:
+                db.execute("INSERT OR REPLACE INTO llm_cache(key,payload,created_at) VALUES (?,?,?)",
+                           (key, json.dumps(answer), now_iso()))
+        finally:
+            db.close()
+
+    def all(self):
+        db = connect()
+        try:
+            return {row[0]: json.loads(row[1]) for row in db.execute("SELECT key, payload FROM llm_cache")}
+        finally:
+            db.close()
 
 
 # Profiles -------------------------------------------------------------------

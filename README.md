@@ -37,6 +37,12 @@ CONTRA_MODEL=gpt-6-astra
 
 The server loads `.env` at startup. Variables already set in the shell take precedence. The startup log states whether model reasoning is enabled. Each analysis makes up to three model calls, one per agent. The model may only pick a permitted focus and cite source IDs that the agent already holds; numbers, statuses and the action stay code-computed. An invalid or failed response falls back to deterministic reasoning, and the report labels each agent's mode. To protect a small credit balance, an identical agent input reuses the earlier validated answer instead of paying again, and `CONTRA_LLM_DAILY_LIMIT` (default 150, 60 in `.env` and on Render) caps paid calls per UTC day. After the cap, agents fall back with a visible warning; `/health` reports today's usage. The key is never sent to the browser or stored in a report. The model adapter has mocked tests only; a live call has not been verified from this workspace.
 
+#### Keeping a small credit balance safe for judges
+
+- **Cache:** an identical agent input reuses its earlier validated answer, and the database keeps those answers across restarts.
+- **Daily limits:** each account may trigger at most `CONTRA_LLM_ACCOUNT_DAILY_LIMIT` paid calls per day (default 9, about three analyses). The whole server stops at `CONTRA_LLM_DAILY_LIMIT`. One visitor therefore cannot use up the budget before a judge arrives. Once a limit is reached, the agents continue rule-based and the report says the model is paused. Facts and the action do not change.
+- **Warm-up:** before judging, run `python -m contra.warm` once. It answers every synthetic scenario for both sample profiles. This took 15 paid calls in testing, because repeated inputs are answered once. It saves the answers to `data/fixtures/model_cache.json`. Commit that file, and the server preloads it, including on a fresh hosted instance whose disk was wiped. Judges then see model reasoning on every scenario at no cost. Each reused answer is labeled "cached answer from <date>". The cache is keyed by model name, so run the warm-up again if you change `CONTRA_MODEL`.
+
 Implementation notes: [architecture](docs/architecture.md) · [five-minute demo](docs/demo.md) · [acceptance status](docs/acceptance.md) · [improvement log](docs/improvement-log.md).
 
 ## Using live data

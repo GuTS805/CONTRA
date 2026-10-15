@@ -68,7 +68,40 @@ class ModelAdapterTests(unittest.TestCase):
             request.assert_not_called()
             market = report["agents"]["market"]
             self.assertEqual(market["execution_mode"], "DETERMINISTIC_FALLBACK")
-            self.assertTrue(any("daily model call limit" in warning for warning in market["warnings"]))
+            self.assertTrue(any("Model reasoning paused: today's model budget is used" in warning
+                                for warning in market["warnings"]))
+
+    def test_one_account_cannot_use_the_whole_budget_and_answers_survive_restart(self):
+        def result(n):
+            return {"status": "OK", "assessment": "BEARISH", "facts": [
+                {"key": "filing_excerpt", "value": f"Margin narrowed {n}.", "source_ids": ["E-01"]}], "evidence_ids": ["E-01"]}
+        payload = {"model": "fixture-model", "output": [{"type": "message", "content": [
+            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"]})}]}]}
+        durable = {}
+        class Store:
+            def get(self, key):
+                return durable.get(key)
+            def put(self, key, answer):
+                durable[key] = answer
+        env = {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_LLM_DAILY_LIMIT": "10",
+               "CONTRA_LLM_ACCOUNT_DAILY_LIMIT": "2"}
+        with patch.dict(os.environ, env), patch.object(llm, "persistent_cache", Store()),              patch("contra.llm.urlopen", side_effect=lambda *a, **k: FakeResponse(payload)) as request:
+            llm.reason("RESEARCH", result(1), owner="visitor")
+            llm.reason("RESEARCH", result(2), owner="visitor")
+            with self.assertRaisesRegex(llm.DailyLimitReached, "this account"):
+                llm.reason("RESEARCH", result(3), owner="visitor")
+            judge = llm.reason("RESEARCH", result(3), owner="judge")
+            self.assertFalse(judge["cached"], "a later visitor still gets model reasoning")
+            self.assertEqual(request.call_count, 3)
+            llm.reset_state()  # A restart clears memory but not the durable store.
+            again = llm.reason("RESEARCH", result(1), owner="someone")
+            self.assertTrue(again["cached"])
+            self.assertEqual(request.call_count, 3)
+            llm.reset_state()
+            with patch.object(llm, "persistent_cache", None):
+                self.assertEqual(llm.preload(dict(durable)), 3)
+                self.assertTrue(llm.reason("RESEARCH", result(2))["cached"], "shipped warm-up answers cost nothing")
+            self.assertEqual(request.call_count, 3)
 
     def test_three_model_paths_are_independent_when_enabled(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -100,6 +133,38 @@ class ModelAdapterTests(unittest.TestCase):
             self.assertEqual(report["synthesis"]["state"], "PARTIAL")
             self.assertTrue(all(a["execution_mode"] == "DETERMINISTIC_FALLBACK" for a in report["agents"].values()))
             self.assertEqual(report["evidence"], [])
+
+    def test_warm_up_writes_reusable_answers_for_every_scenario(self):
+        from pathlib import Path
+        from contra import warm
+        def answer(request, timeout):
+            facts = json.loads(json.loads(request.data)["input"])
+            focus = next(iter(llm.allowed_focus(facts["agent"], {**facts, "evidence_ids": facts["eligible_evidence_ids"]})))
+            ids = facts["eligible_evidence_ids"][:1]
+            return FakeResponse({"model": "fixture-model", "output": [{"type": "message", "content": [
+                {"type": "output_text", "text": json.dumps({"focus": focus, "supporting_ids": ids})}]}]})
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "model_cache.json"
+            env = {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_DB": folder + "/warm.sqlite3",
+                   "CONTRA_ENV_FILE": os.devnull, "CONTRA_LLM_DAILY_LIMIT": "100"}
+            with patch.dict(os.environ, env), patch.object(warm, "WARM_CACHE", target),                  patch("contra.server.WARM_CACHE", target), patch("contra.llm.urlopen", side_effect=answer) as request,                  patch.object(llm, "persistent_cache", None):
+                warm.main()
+                paid = request.call_count
+                shipped = json.loads(target.read_text(encoding="utf-8"))["answers"]
+                self.assertGreater(len(shipped), 0)
+                self.assertLess(paid, 24, "identical scenario inputs are answered once")
+                llm.reset_state()
+                llm.persistent_cache = None
+                llm.preload(shipped)
+                investor = store_profiles()[0]
+                report = asyncio.run(analyze("ALPHA.NS", investor))
+                self.assertEqual(request.call_count, paid, "a preloaded scenario costs nothing")
+                self.assertTrue(all(a["reasoning"]["cached"] for a in report["agents"].values()))
+
+
+def store_profiles():
+    from contra.store import baseline_profiles
+    return baseline_profiles()
 
 
 if __name__ == "__main__":

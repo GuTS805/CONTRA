@@ -14,7 +14,7 @@ import sys
 import traceback
 from urllib.parse import urlparse, unquote, parse_qs
 
-from . import auth, live
+from . import auth, live, llm
 from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
@@ -24,6 +24,7 @@ from . import store
 from .store import RunIntegrityError, RevisionConflict, baseline_profiles
 
 WEB = Path(__file__).resolve().parent.parent / "web"
+WARM_CACHE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "model_cache.json"
 LOOPBACK = {"127.0.0.1", "localhost"}
 MAX_SECURITIES = 20
 MAX_DOCUMENTS = 200
@@ -400,7 +401,7 @@ class Handler(BaseHTTPRequestHandler):
             snapshot = prepare(ticker, as_of or bars[-1]["trade_date"], bars,
                                store.user_documents(db, owner, ticker), live.LIVE_DATASET_ID, "LIVE")
         sectors = {key: info["sector"] for key, info in catalog.items()}
-        report = asyncio.run(analyze(ticker, person, snapshot=snapshot, sectors=sectors, warnings=warnings))
+        report = asyncio.run(analyze(ticker, person, snapshot=snapshot, sectors=sectors, warnings=warnings, owner=owner))
         store.save_run(db, report, owner)
         return self._send(201, report)
 
@@ -441,9 +442,17 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("%s - %s\n" % (self.address_string(), (format % args).split("?", 1)[0]))
 
 
+def install_model_cache() -> int:
+    """Use the database for model answers and preload any shipped warm-up answers."""
+    llm.persistent_cache = store.ModelCache()
+    seeded = json.loads(WARM_CACHE.read_text(encoding="utf-8")) if WARM_CACHE.is_file() else {}
+    return llm.preload(seeded.get("answers", {}))
+
+
 def main():
     loaded = load_env()
     store.connect().close()
+    seeded = install_model_cache()
     host = os.environ.get("CONTRA_HOST", "127.0.0.1")
     public = os.environ.get("CONTRA_PUBLIC") == "1"
     if host not in LOOPBACK and not public:
@@ -463,6 +472,8 @@ def main():
           + (f" (public hosts: {', '.join(sorted(public_hosts))})" if public else ""), flush=True)
     if loaded:
         print(f"Loaded settings from .env: {', '.join(sorted(loaded))}", flush=True)
+    if seeded:
+        print(f"Preloaded {seeded} cached model answers for the demo scenarios", flush=True)
     print("Model reasoning: " + (f"enabled ({os.environ.get('CONTRA_MODEL', 'gpt-6-astra')}, up to {llm_usage()['limit']} calls per day)" if llm_configured() else
           "off (set CONTRA_LLM=1 and OPENAI_API_KEY in .env to enable)"), flush=True)
     try:

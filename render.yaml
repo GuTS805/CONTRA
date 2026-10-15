@@ -13,5 +13,7 @@ services:
         value: gpt-6-astra
       - key: CONTRA_LLM_DAILY_LIMIT
         value: "60"
+      - key: CONTRA_LLM_ACCOUNT_DAILY_LIMIT
+        value: "9"
       - key: OPENAI_API_KEY
         sync: false

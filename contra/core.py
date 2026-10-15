@@ -230,7 +230,8 @@ def filing_signal(snapshot: dict, retrieved: list[dict]) -> dict:
             "warning": "At least one cited filing is over 120 days old" if stale else None}
 
 
-async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: set[str] | None = None):
+async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: set[str] | None = None,
+                      owner: str | None = None):
     start = stamp()
     clock = perf_counter()
     execution_mode = "DETERMINISTIC_FALLBACK"
@@ -246,11 +247,15 @@ async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: 
             result["warnings"].append("Agent cited a source outside its eligible evidence set")
         if sources_valid and use_model and llm.configured() and result["status"] in ("OK", "PARTIAL"):
             try:
-                model_metadata = await asyncio.to_thread(llm.reason, name, result)
+                extra = {"owner": owner} if owner else {}
+                model_metadata = await asyncio.to_thread(llm.reason, name, result, **extra)
                 execution_mode = "LLM_REASONED"
             except Exception as exc:
-                reason = "daily model call limit reached" if isinstance(exc, llm.DailyLimitReached) else type(exc).__name__
-                result.setdefault("warnings", []).append(f"Model reasoning unavailable; deterministic fallback ({reason}).")
+                if isinstance(exc, llm.DailyLimitReached):
+                    note = f"Model reasoning paused: {exc}. Rule-based reasoning was used; facts and the action are unaffected."
+                else:
+                    note = f"Model reasoning unavailable; deterministic fallback ({type(exc).__name__})."
+                result.setdefault("warnings", []).append(note)
     except Exception as exc:
         result = {"status": "ERROR", "assessment": "UNKNOWN", "facts": [],
                   "evidence_ids": [], "warnings": [str(exc)], "evidence_confidence": None}
@@ -508,7 +513,8 @@ def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict, sectors
 
 
 async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: bool = True,
-                  snapshot: dict | None = None, sectors: dict | None = None, warnings: list[str] | None = None) -> dict:
+                  snapshot: dict | None = None, sectors: dict | None = None, warnings: list[str] | None = None,
+                  owner: str | None = None) -> dict:
     """Run the three agents on a frozen snapshot. Pass `snapshot` from prepare() for live data."""
     wall_start = perf_counter()
     snapshot = snapshot or prepare(ticker, as_of)
@@ -522,9 +528,9 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
         return work()
     allowed_by_agent = {"market": set(numeric["momentum"]["evidence_ids"] + numeric["volume"]["evidence_ids"]),
                         "research": {doc["id"] for doc in retrieved}, "risk": {profile["id"]}}
-    tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"]),
-             timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"]),
-             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker, sectors)), allow_llm, allowed_by_agent["risk"])]
+    tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"], owner),
+             timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"], owner),
+             timed_agent("RISK", lambda: parallel(lambda: risk_agent(profile, ticker, sectors)), allow_llm, allowed_by_agent["risk"], owner)]
     outcomes = await asyncio.gather(*(asyncio.wait_for(task, timeout=10 if allow_llm and llm.configured() else 2) for task in tasks), return_exceptions=True)
     agents = {}
     for key, outcome in zip(("market", "research", "risk"), outcomes):
