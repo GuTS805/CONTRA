@@ -122,7 +122,8 @@ class SummaryVerificationTests(unittest.TestCase):
         quarter = "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency."
         cash = "We have no outstanding borrowings. We believe that our working capital is sufficient."
         mercedes = "moving one of the automotive sector\u2019s largest hybrid cloud operations"
-        excerpts = {"E-G": guidance, "E-Q": quarter, "E-C": cash, "E-M": mercedes}
+        margin = "Operating margin narrowed as component costs rose despite stronger reported revenue."
+        excerpts = {"E-G": guidance, "E-Q": quarter, "E-C": cash, "E-M": mercedes, "E-A": margin}
 
         def claim(sentence, source, quote):
             return {"sentence": sentence, "source_id": source, "quote": quote}
@@ -148,6 +149,9 @@ class SummaryVerificationTests(unittest.TestCase):
             ([claim("Guidance was revised.", "E-G", "Guidance Revised")], "not exact text"),
             ([claim("Revenue guidance was revised.", "E-X", "Revenue Guidance Revised to")], "outside the eligible set"),
             ([claim("Revenue guidance was revised. It was lowered.", "E-G", "Revenue Guidance Revised to")], "one sentence"),
+            # A direction word that appears in the quote must not license a different one in the sentence.
+            ([claim("Operating margin improved as costs rose.", "E-A", "Operating margin narrowed as component costs rose")],
+             "direction word"),
             ([claim("Revenue guidance was revised.", "E-G", "Revenue Guidance Revised to")] * 4, "one to three"),
             (["Revenue guidance was revised."], "malformed"),
         )
@@ -227,7 +231,8 @@ class SummaryVerificationTests(unittest.TestCase):
             return {"focus": next(iter(llm.allowed_focus(agent, result))), "supporting_ids": ids, "summary": summary,
                     "note": "fixture", "model_version": "fixture-model", "cached": False, "answered_at": "2026-10-15T00:00:00+00:00"}
         with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key"}), \
-                patch("contra.llm.reason", side_effect=fake):
+                patch("contra.llm.reason", side_effect=fake), \
+                patch("contra.investigator.investigate", return_value=None):
             report = asyncio.run(analyze("ALPHA.NS", baseline_profiles()[0]))
         agents = report["agents"]
         self.assertEqual(agents["research"]["briefing"]["source"], "MODEL_VERIFIED")

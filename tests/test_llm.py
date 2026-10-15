@@ -168,6 +168,17 @@ class ModelAdapterTests(unittest.TestCase):
                         for i, _ in enumerate(body["input"])]
                 return FakeResponse({"data": rows})
             facts = json.loads(body["input"])
+            step = body["text"]["format"]["name"]
+            if step == "contra_investigation_plan":
+                questions = ["Why is operating margin narrowing?", "Have any customers renewed contracts?"]
+                return FakeResponse({"model": "fixture-model", "output": [{"type": "message", "content": [
+                    {"type": "output_text", "text": json.dumps({"questions": questions})}]}]})
+            if step == "contra_investigation_findings":
+                first = facts["passages"][0]
+                finding = {"sentence": "This passage states one fact.", "source_id": first["id"],
+                           "quote": " ".join(first["excerpt"].split()[:5])}
+                return FakeResponse({"model": "fixture-model", "output": [{"type": "message", "content": [
+                    {"type": "output_text", "text": json.dumps({"findings": [finding]})}]}]})
             focus = next(iter(llm.allowed_focus(facts["agent"], {**facts, "evidence_ids": facts["eligible_evidence_ids"]})))
             ids = facts["eligible_evidence_ids"][:1]
             choice = {"focus": focus, "supporting_ids": ids}
@@ -197,9 +208,10 @@ class ModelAdapterTests(unittest.TestCase):
                 self.assertIn("model-written and verified, 0 replaced by rule summaries", output.getvalue())
                 paid = request.call_count
                 shipped = json.loads(target.read_text(encoding="utf-8"))["answers"]
-                self.assertEqual(len(shipped), 19)
-                self.assertEqual(paid, 19, "identical scenario inputs are answered once")
-                self.assertEqual(embed_request.call_count, 1, "all warm-up texts are embedded in one batch")
+                self.assertEqual(len(shipped), 20, "19 agent answers plus the one disagreement investigation")
+                self.assertEqual(paid, 21, "identical inputs are answered once; the investigation takes two calls")
+                warm_embeds = embed_request.call_count
+                self.assertEqual(sum(1 for key in shipped if shipped[key].get("prompt_version") == "investigation-1.3"), 1)
                 vectors = json.loads(vectors_file.read_text(encoding="utf-8"))["vectors"]
                 llm.reset_state()
                 embeddings.reset_state()
@@ -212,7 +224,7 @@ class ModelAdapterTests(unittest.TestCase):
                                  ["MODEL_VERIFIED", "MODEL_VERIFIED", "RULES"], "risk keeps its exact rule briefing")
                 from contra.evaluation import semantic_evaluation
                 self.assertEqual(semantic_evaluation()["status"], "MEASURED", "evaluation runs from shipped vectors")
-                self.assertEqual(embed_request.call_count, 1)
+                self.assertEqual(embed_request.call_count, warm_embeds, "evaluation needs no new embedding calls")
 
 
 def store_profiles():

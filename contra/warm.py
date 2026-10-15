@@ -34,10 +34,15 @@ def main() -> None:
         raise SystemExit("Set OPENAI_API_KEY and CONTRA_LLM=1 in .env first.")
     install_model_cache()
     before = llm.usage()["calls"]
-    used_keys, failures, verified, by_rule, rejected = set(), [], 0, 0, []
+    used_keys, failures, verified, by_rule, rejected, questions, investigations = set(), [], 0, 0, [], [], {}
     for investor in store.baseline_profiles():
         for ticker in STOCKS:
             report = asyncio.run(analyze(ticker, investor))
+            found = report.get("investigation")
+            if found and found.get("cache_key"):
+                used_keys.add(found["cache_key"])
+                questions += found.get("questions") or []
+                investigations[ticker] = found["status"]
             for name, agent in report["agents"].items():
                 if agent["execution_mode"] == "LLM_REASONED":
                     used_keys.add(agent["reasoning"]["cache_key"])
@@ -57,6 +62,7 @@ def main() -> None:
     print(f"Paid model calls: {llm.usage()['calls'] - before}. Cached scenario answers: {len(answers)}.")
     print(f"Agent briefings: {verified} model-written and verified, {len(rejected)} replaced by rule summaries, "
           f"{by_rule} rule-based by design (risk).")
+    print(f"Disagreement investigations: {investigations or 'none'}.")
     print(f"Wrote {WARM_CACHE}")
     for failure in failures:
         print("Not model-reasoned:", failure)
@@ -64,7 +70,7 @@ def main() -> None:
         print("Summary rejected:", item)
 
     texts = list(dict.fromkeys([doc["excerpt"] for doc in documents() + public_filings.documents()]
-                              + SUGGESTED_QUESTIONS + paraphrase_texts()))
+                              + SUGGESTED_QUESTIONS + paraphrase_texts() + questions))
     embed_before = embeddings.usage()["calls"]
     embeddings.embed(texts)
     vectors = {embeddings.key_for(text): vector for text, vector in zip(texts, embeddings.cached_only(texts))}

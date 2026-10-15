@@ -510,3 +510,11 @@ footer span { color: #777175; }
   .hero-wave { margin: 8px 0; }
   .large-state::after { width: 130px; height: 130px; right: -25px; top: -45px; box-shadow: 0 0 0 24px #ff8f4d12; }
 }
+
+/* Disagreement investigation. */
+.inv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 14px; }
+.inv-steps { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; }
+.inv-steps li { margin-bottom: 10px; }
+.inv-steps small { display: block; color: #77716f; font-size: 11px; margin-top: 2px; }
+.inv-reading { font-weight: 700; margin: 8px 0 0; }
+@media (max-width: 980px) { .inv-grid { grid-template-columns: 1fr; } }

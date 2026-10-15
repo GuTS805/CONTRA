@@ -29,6 +29,7 @@ async function analysis(investor){const response=await authed(base+'/v1/analyses
  assert(element('#view').innerHTML.includes('Download JSON'));
  assert(element('#view').innerHTML.includes('Show calculation and sources'));
  assert(element('#view').innerHTML.includes('PERSONALIZED PORTFOLIO ACTION'));
+ assert(element('#view').innerHTML.includes('Same evidence, every investor'));
  assert(element('#view').innerHTML.includes('Compare all 3 investors'));
  assert(element('#view').innerHTML.includes('Reduce exposure'));
  assert(element('#view').innerHTML.includes('Ask the filings'));

@@ -15,7 +15,7 @@ MODELS_URL = "https://api.openai.com/v1/models"
 # Low-cost models that support the Responses API with strict JSON-schema output, cheapest first.
 PREFERRED_MODELS = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4.1-mini", "gpt-5-nano", "gpt-5-mini"]
 _resolved = {"model": None, "detail": None}
-PROMPT_VERSION = "briefing-2.3"
+PROMPT_VERSION = "briefing-2.4"
 FOCUS = {
     "MARKET": ["DIRECTION", "PARTICIPATION", "UNCERTAINTY"],
     "RESEARCH": ["POSITIVE_FACTS", "NEGATIVE_FACTS", "MIXED_FACTS", "UNCERTAINTY"],
@@ -256,6 +256,19 @@ def _words(text: str) -> str:
     return " ".join(text.replace("’", "'").replace("‘", "'").lower().split())
 
 
+IRREGULAR_STEMS = (("rise", r"rose|rise\w*|risen|rising"), ("fall", r"fell|fall\w*"), ("grow", r"grew|grow\w*"),
+                   ("shrink", r"shrank|shrink\w*"), ("up", r"upward\w*"), ("down", r"downward\w*"))
+
+
+def _direction_stems(text: str) -> set[str]:
+    """Stems of every rise or fall word in a text: "narrowed" matches "narrowing" and "grew" matches "growth",
+    but "improved" does not match "rose"."""
+    stems = set()
+    for word in re.findall(rf"\b(?:{UP}|{DOWN})\b", text):
+        stems.add(next((name for name, pattern in IRREGULAR_STEMS if re.fullmatch(pattern, word)), word[:5]))
+    return stems
+
+
 def verify_claims(claims, excerpts: dict) -> str | None:
     """Check research claims against the excerpts they cite; None when every claim passes."""
     if not isinstance(claims, list) or not 1 <= len(claims) <= 3:
@@ -283,6 +296,8 @@ def verify_claims(claims, excerpts: dict) -> str | None:
         for word in QUALITY:
             if re.search(rf"\b{word}\w*", sentence) and not re.search(rf"\b{word}\w*", quote):
                 return f"calls something {word}, which its quote does not"
+        if _direction_stems(sentence) - _direction_stems(quote):
+            return "uses a direction word its quote does not use"
         if bool(NEGATED.search(sentence)) != bool(NEGATED.search(quote)):
             return "negation does not match its quote"
     return None
@@ -327,6 +342,30 @@ def verify_summary(text, agent: str, input_facts: dict) -> str | None:
                                                  (change > 0 and _unnegated(PRICE_DOWN, lowered))):
             return "contradicts the sign of the measured price change"
     return None
+
+
+def structured_call(name: str, schema: dict, instructions: str, payload: dict, owner: str | None = None,
+                    max_tokens: int = 500) -> tuple[dict, str]:
+    """One budgeted strict-JSON-schema request. Returns the parsed answer and the model version that gave it."""
+    if not configured():
+        raise RuntimeError("LLM adapter is disabled or missing a server-side key")
+    model = resolve_model()
+    if not model:
+        raise RuntimeError("No usable model")
+    _spend_call(owner)
+    body = {"model": model, "instructions": instructions, "input": json.dumps(payload, allow_nan=False),
+            "text": {"format": {"type": "json_schema", "name": name, "strict": True, "schema": schema}},
+            "max_output_tokens": max_tokens, "store": False}
+    request = Request(API_URL, data=json.dumps(body).encode(), method="POST",
+                      headers={"Authorization": "Bearer " + os.environ["OPENAI_API_KEY"],
+                               "Content-Type": "application/json"})
+    with urlopen(request, timeout=10) as response:
+        data = json.load(response)
+    texts = [content["text"] for item in data.get("output", []) if item.get("type") == "message"
+             for content in item.get("content", []) if content.get("type") == "output_text"]
+    if len(texts) != 1:
+        raise ValueError("Model returned no single structured text output")
+    return json.loads(texts[0]), data.get("model", model)
 
 
 TONE_PROMPT_VERSION = "tone-1.0"

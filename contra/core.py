@@ -14,7 +14,7 @@ import uuid
 from collections import Counter
 
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, documents
-from . import llm, flows
+from . import investigator, llm, flows
 
 METHOD_VERSION = "rules-1.4"
 _CLOCK_ANCHOR = datetime.now(timezone.utc)
@@ -686,6 +686,16 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     for name, agent in agents.items():
         agent["briefing"] = briefing(name, agent, ticker)
     recommendation = recommend(ticker, profile, agents, synthesis, sectors)
+    investigation, investigation_ms = None, None
+    if synthesis["state"] == "CONFLICTED" and allow_llm and llm.configured():
+        began = perf_counter()
+        try:
+            investigation = await asyncio.wait_for(asyncio.to_thread(
+                investigator.investigate, agents, snapshot["documents"], hybrid_rank, owner), timeout=45)
+        except asyncio.TimeoutError:
+            investigation = {"status": "UNAVAILABLE", "reason": "the investigation timed out",
+                             "policy_note": investigator.POLICY_NOTE}
+        investigation_ms = round((perf_counter() - began) * 1000, 2)
     cited = list(dict.fromkeys(x for a in agents.values() for x in a["evidence_ids"] if x.startswith("E-")))
     evidence = [d for d in retrieved if d["id"] in cited]
     run_id = "run_" + uuid.uuid4().hex[:12]
@@ -703,11 +713,13 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             "investor_snapshot": profile,
             "sector_snapshot": dict(sectors or {}),
             "signals": signals, "agents": agents, "synthesis": synthesis, "recommendation": recommendation,
+            **({"investigation": investigation} if investigation else {}),
             "evidence": evidence,
             "metrics": {"wall_latency_ms": wall_ms,
                         "citation_validity": round((len(raw_research_citations) - invalid_research_citations) / len(raw_research_citations), 3) if raw_research_citations else None,
                         "citation_count": len(cited), "citation_fabrication_count": invalid_research_citations,
                         "portfolio_concentration": agents["risk"].get("position_weight"),
+                        **({"investigation_ms": investigation_ms} if investigation else {}),
                         "agent_overlap": max(a["started_at"] for a in agents.values()) < min(a["finished_at"] for a in agents.values())}}
     report["report_hash"] = digest(report)
     return report
