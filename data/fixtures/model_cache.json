@@ -228,6 +228,35 @@
     "total_tokens": 570
    }
   },
+  "58b2429f841119571f87acdd001418914e76fdfd969433d0ebb797249de5f571": {
+   "answered_at": "2026-10-15T10:33:02+00:00",
+   "cache_key": "58b2429f841119571f87acdd001418914e76fdfd969433d0ebb797249de5f571",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_fe6b20245bad4038b52bbbed37d88cc3",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_starter"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
+   }
+  },
   "67c1fb3e9f16eb11df1f2c8f38312c11a69806fe7ec97f339c7cb5a5543652e6": {
    "answered_at": "2026-10-15T03:23:46+00:00",
    "cache_key": "67c1fb3e9f16eb11df1f2c8f38312c11a69806fe7ec97f339c7cb5a5543652e6",
@@ -284,6 +313,35 @@
      "reasoning_tokens": 0
     },
     "total_tokens": 335
+   }
+  },
+  "a89d1c5b748626820aff77dd9ca3f4ac6b6bd3a812939363422ae3ed474934a2": {
+   "answered_at": "2026-10-15T10:33:06+00:00",
+   "cache_key": "a89d1c5b748626820aff77dd9ca3f4ac6b6bd3a812939363422ae3ed474934a2",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_ee1c4ff058dd4c7eb39978405b7fe317",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_starter"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
    }
   },
   "a98ffba147b75eda1f14e326828aee644d32589cc727de357e0a1cc7e0c79498": {
@@ -454,6 +512,35 @@
     "total_tokens": 335
    }
   },
+  "f9f2002c9a165d91c1ea4fdce74b04b2251773175f89fad9be3748ac9240272a": {
+   "answered_at": "2026-10-15T10:33:04+00:00",
+   "cache_key": "f9f2002c9a165d91c1ea4fdce74b04b2251773175f89fad9be3748ac9240272a",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_2c39a140f0054fcfaf7d59beb51ef528",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_starter"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
+   }
+  },
   "fc408bf01bccf5962a296b6810bb7478e5c95c4102dcb32c6dfadebe6cf18a66": {
    "answered_at": "2026-10-15T03:23:53+00:00",
    "cache_key": "fc408bf01bccf5962a296b6810bb7478e5c95c4102dcb32c6dfadebe6cf18a66",
@@ -481,6 +568,35 @@
      "reasoning_tokens": 0
     },
     "total_tokens": 335
+   }
+  },
+  "feb900cd0c68f46dcf0f564035cd42e031ab95ab18ed53770a6ef47d31eb8e28": {
+   "answered_at": "2026-10-15T10:33:02+00:00",
+   "cache_key": "feb900cd0c68f46dcf0f564035cd42e031ab95ab18ed53770a6ef47d31eb8e28",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_0fe376d9767e43169f4775123a295b1d",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_starter"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
    }
   }
  },

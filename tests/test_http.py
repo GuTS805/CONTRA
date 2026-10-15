@@ -256,6 +256,13 @@ class HttpTests(unittest.TestCase):
         alice = self.session("/v1/auth/signup", {"username": "alice_test", "password": "correct horse"})
         _, me = self.request_json("/v1/auth/me", opener=alice)
         self.assertEqual((me["username"], me["is_guest"]), ("alice_test", False))
+        _, listed = self.request_json("/v1/profiles", opener=alice)
+        self.assertEqual([item["id"] for item in listed["profiles"]], ["demo_conservative", "demo_growth", "demo_starter"])
+        # An account created before the third sample profile existed receives it on its next listing.
+        with closing(sqlite3.connect(self.db_path())) as db, db:
+            db.execute("DELETE FROM user_profiles WHERE owner_id=? AND id='demo_starter'", (me["id"],))
+        _, listed = self.request_json("/v1/profiles", opener=alice)
+        self.assertIn("demo_starter", [item["id"] for item in listed["profiles"]])
         with self.assertRaises(HTTPError) as raised:
             self.session("/v1/auth/signup", {"username": "ALICE_test", "password": "another pass"})
         self.assertEqual(raised.exception.code, 400, "usernames are unique regardless of case")

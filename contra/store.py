@@ -91,14 +91,19 @@ def now_iso() -> str:
 
 def baseline_profiles(updated_at: str | None = None) -> list[dict]:
     now = updated_at or "2026-10-13T00:00:00+00:00"
-    positions = [{"ticker": "ALPHA.NS", "value": 15000}, {"ticker": "BETA.NS", "value": 25000},
-                 {"ticker": "GAMMA.NS", "value": 5000}, {"ticker": "CASH", "value": 55000}]
+    holder = [{"ticker": "ALPHA.NS", "value": 15000}, {"ticker": "BETA.NS", "value": 25000},
+              {"ticker": "GAMMA.NS", "value": 5000}, {"ticker": "CASH", "value": 55000}]
+    # A newer investor: mostly cash, no ALPHA position, moderate caps.
+    starter = [{"ticker": "BETA.NS", "value": 10000}, {"ticker": "GAMMA.NS", "value": 5000},
+               {"ticker": "CASH", "value": 85000}]
     result = []
-    for ident, name, tier, cap in (("demo_conservative", "Conservative", "CONSERVATIVE", .10),
-                                    ("demo_growth", "Growth", "GROWTH", .30)):
+    for ident, name, tier, cap, sector_cap, horizon, positions in (
+            ("demo_conservative", "Conservative", "CONSERVATIVE", .10, .5, "LONG", holder),
+            ("demo_growth", "Growth", "GROWTH", .30, .5, "LONG", holder),
+            ("demo_starter", "Starter", "BALANCED", .15, .4, "MEDIUM", starter)):
         profile = {"id": ident, "display_name": name, "risk_tier": tier,
-                   "max_single_asset_weight": cap, "max_sector_weight": .5,
-                   "investment_horizon": "LONG", "positions": [dict(position) for position in positions],
+                   "max_single_asset_weight": cap, "max_sector_weight": sector_cap,
+                   "investment_horizon": horizon, "positions": [dict(position) for position in positions],
                    "watchlist": ["ALPHA.NS", "BETA.NS", "GAMMA.NS", "DELTA.NS"],
                    "revision": 1, "updated_at": now, "mode": "SYNTHETIC"}
         result.append(profile)

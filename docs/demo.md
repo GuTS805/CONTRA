@@ -9,7 +9,7 @@ Start the server with `python -m contra.server`, open `http://localhost:8000` an
 | 1:20–1:40 | Open the agent trace and timing. | Three independently executed pipelines with overlapping intervals; each labels model reasoning or deterministic fallback. |
 | 1:40–2:20 | Read **What each agent found**. Then, in **Ask the filings**, click "Is profitability getting squeezed?" and type "weather forecast". | Verified model briefings with citations. Semantic search finds a paraphrase that shares no words with the excerpt, and returns nothing when no source supports an answer. |
 | 2:20–2:50 | Expand **Show calculation and sources** and open the negative filing excerpt. | Dated numeric references, exact words, date and hash. |
-| 2:50–3:35 | Click **Compare Growth**. | Same market hash and signals; the action changes from Reduce exposure to Hold · review. |
+| 2:50–3:35 | Click **Compare all 3 investors**, then **Compare Growth**. | Same market hash and signals for three saved profiles; the actions differ: reduce exposure, hold and review, do not open a position. |
 | 3:35–4:10 | Run DELTA.NS. | No eligible filing by the as-of date; research abstains and the report is partial. |
 | 4:10–4:35 | Open Portfolio. Show the personalized insights table. | Every holding is checked against this investor's limits, with the trim or room to add. |
 | 4:35–5:00 | Open Evaluation. Show the scenario matrix, which checks both state and action, Recall@3 and the 10-run benchmark. | Reproducibility, metrics and persistence. |

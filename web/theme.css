@@ -394,3 +394,10 @@ footer span { color: #777175; }
   .overview-steps li::before { order: -2; }
   .overview-steps li::after { order: -1; }
 }
+
+/* Same evidence, every investor. */
+.investors .table-wrap { overflow-x: auto; margin-top: 12px; }
+.investors-table td { vertical-align: top; }
+.investors-table td small { display: block; color: #77716f; font-size: 11px; }
+.investors-table tr.current td { background: #fff6ef; }
+.investors-table a { color: var(--orange-dark); font-weight: 700; white-space: nowrap; }

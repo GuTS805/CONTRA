@@ -129,3 +129,8 @@ Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at
 - Research briefings are now claims: each sentence with one source ID and an exact quote from it. Code rejects the claim when the quote is not exact text, or when the sentence names a topic, direction, quality word or negation that the quote does not contain. The original error is a regression test.
 - A real Market briefing read above-typical volume as "a decline in market activity". Market briefings may no longer interpret the measurements, and may not describe price direction against the measured sign.
 - Re-warm with gpt-4.1-nano (briefing-2.1): 15 paid calls, 10 of 14 briefings verified, 4 replaced by labeled rule summaries. Reasons: a sentence naming revenue that its quote lacked, and "suggest a bullish market condition".
+
+### Cycle 17: three investor profiles and an all-investor comparison
+- Added a third sample profile, Starter: a newer, cash-heavy investor with a 15% single-name cap and a 40% sector cap, who does not hold ALPHA. Existing accounts receive it on their next profile listing.
+- The report has a new **Same evidence, every investor** panel. It runs the frozen snapshot for every saved profile and shows each holding, action and headline, with a check that the market snapshot is identical.
+- On ALPHA the three actions differ: reduce by about 5,000, hold and review, do not open a position. On GAMMA the room to add is 5,000, 25,000 and 10,000.

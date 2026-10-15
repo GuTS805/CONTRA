@@ -183,7 +183,10 @@ class ModelAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             target, vectors_file = Path(folder) / "model_cache.json", Path(folder) / "embedding_cache.json"
             env = {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_DB": folder + "/warm.sqlite3",
-                   "CONTRA_ENV_FILE": os.devnull, "CONTRA_LLM_DAILY_LIMIT": "100"}
+                   "CONTRA_ENV_FILE": os.devnull, "CONTRA_LLM_DAILY_LIMIT": "100", "CONTRA_MODEL": "fixture-model"}
+            # Answers cached in memory by earlier tests must not count as warm-up answers.
+            llm.reset_state()
+            self.addCleanup(llm.reset_state)
             embeddings.reset_state()
             self.addCleanup(embeddings.reset_state)
             with patch.dict(os.environ, env), patch.object(warm, "WARM_CACHE", target),                     patch.object(warm, "WARM_EMBEDDINGS", vectors_file), patch("contra.server.WARM_CACHE", target),                     patch("contra.server.WARM_EMBEDDINGS", vectors_file),                     patch("contra.llm.urlopen", side_effect=answer) as request,                     patch("contra.embeddings.urlopen", side_effect=answer) as embed_request,                     patch.object(llm, "persistent_cache", None), patch.object(embeddings, "persistent_cache", None):
@@ -194,8 +197,8 @@ class ModelAdapterTests(unittest.TestCase):
                 self.assertIn("model-written and verified, 0 replaced by rule summaries", output.getvalue())
                 paid = request.call_count
                 shipped = json.loads(target.read_text(encoding="utf-8"))["answers"]
-                self.assertEqual(len(shipped), 15)
-                self.assertEqual(paid, 15, "identical scenario inputs are answered once")
+                self.assertEqual(len(shipped), 19)
+                self.assertEqual(paid, 19, "identical scenario inputs are answered once")
                 self.assertEqual(embed_request.call_count, 1, "all warm-up texts are embedded in one batch")
                 vectors = json.loads(vectors_file.read_text(encoding="utf-8"))["vectors"]
                 llm.reset_state()

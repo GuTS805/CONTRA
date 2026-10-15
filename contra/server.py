@@ -208,6 +208,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/v1/stocks":
                 return self._send(200, self._catalog(db, owner))
             if path == "/v1/profiles":
+                store.seed_profiles(db, owner)
                 return self._send(200, {"profiles": store.profiles(db, owner)})
             if len(parts) == 5 and parts[2] == "profiles" and parts[4] in ("portfolio", "insights"):
                 item = store.profile(db, parts[3], owner)
@@ -283,7 +284,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, asyncio.run(benchmark_fixed(baseline_profiles()[0])))
             else:
                 return self._error(404, "NOT_FOUND", "Unknown route")
-        conservative, growth = baseline_profiles()
+        conservative, growth = baseline_profiles()[:2]
         scenario = asyncio.run(scenario_matrix(conservative, growth))
         latencies = sorted(r["metrics"]["wall_latency_ms"] for r in runs)
         validity = [r["metrics"]["citation_validity"] for r in runs if r["metrics"]["citation_validity"] is not None]

@@ -228,6 +228,19 @@ class DemoTests(unittest.TestCase):
         self.assertTrue(delta["headline"].startswith("Do not open a position"), "an unheld stock cannot be held")
         self.assertEqual(self.analyze("ALPHA.NS", as_of="2026-06-12")["recommendation"]["action"], "NO_VIEW")
 
+    def test_three_investors_get_different_actions_on_the_same_evidence(self):
+        runs = {name: self.analyze(ticker, name) for ticker in ("ALPHA.NS",)
+                for name in ("demo_conservative", "demo_growth", "demo_starter")}
+        self.assertEqual(len({run["market_snapshot_hash"] for run in runs.values()}), 1, "identical market evidence")
+        self.assertEqual([run["recommendation"]["action"] for run in runs.values()],
+                         ["REDUCE_EXPOSURE", "HOLD_REVIEW", "HOLD_REVIEW"])
+        self.assertEqual(len({run["recommendation"]["headline"] for run in runs.values()}), 3,
+                         "each investor gets a visibly different instruction")
+        self.assertTrue(runs["demo_starter"]["recommendation"]["headline"].startswith("Do not open a position"))
+        sizes = [self.analyze("GAMMA.NS", name)["recommendation"]["sizing"]["change_value"]
+                 for name in ("demo_conservative", "demo_growth", "demo_starter")]
+        self.assertEqual(sizes, [5000, 25000, 10000], "room to add follows each investor's cap and cash")
+
     def test_addition_is_limited_by_available_cash(self):
         update_profile(self.db, "demo_growth", {"positions": [{"ticker": "GAMMA.NS", "value": 5000},
                                                                {"ticker": "ALPHA.NS", "value": 93000},
