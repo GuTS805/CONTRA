@@ -1,5 +1,7 @@
 # CONTRA
 
+**Live demo:** <https://contra-h0nw.onrender.com>. Click **Continue as guest**. The free instance sleeps when idle, so the first load can take up to a minute.
+
 CONTRA is an evidence-first investment research assistant. Three agents run concurrently on one frozen snapshot: Market (price momentum and volume), Research (retrieval over dated filing excerpts) and Risk (the investor's own limits). CONTRA then gives a personalized, sized portfolio action with cited reasons and the conditions that would change it.
 
 It works on two kinds of data, and each report labels which one it used:
