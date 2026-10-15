@@ -384,3 +384,13 @@ footer span { color: #777175; }
   .table { font-size: 11px; }
   footer { padding: 12px 15px; }
 }
+
+/* Review fixes: keep the hero facts on one line, top-align the terminal cards, match the chart to the theme. */
+.terminal-hero .hero-right { max-width: none; white-space: nowrap; text-shadow: 0 1px 8px #000c; }
+.terminal-grid { align-items: start; }
+.chart-wrap polyline { stroke: var(--orange); }
+@media (max-width: 700px) {
+  .overview-steps li { display: flex; flex-direction: column; }
+  .overview-steps li::before { order: -2; }
+  .overview-steps li::after { order: -1; }
+}
