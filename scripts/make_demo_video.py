@@ -334,6 +334,70 @@ def subtitle_scenes(path):
     return scenes
 
 
+def tighten_video(ffmpeg):
+    """Shorten quiet scene tails in both streams, then retime the external SRT."""
+    original = OUTPUT / "CONTRA_hackathon_demo_uncut.mp4"
+    original_srt = OUTPUT / "CONTRA_hackathon_demo_uncut.srt"
+    destination = OUTPUT / "CONTRA_hackathon_demo.mp4"
+    subtitles = OUTPUT / "CONTRA_hackathon_demo.srt"
+    scenes = subtitle_scenes(original_srt)
+    duration = scenes[-1][1]
+    scan = subprocess.run([
+        ffmpeg, "-hide_banner", "-i", str(original), "-vn", "-af",
+        "silencedetect=noise=-38dB:d=1.1", "-f", "null", "-",
+    ], capture_output=True, text=True, check=True).stderr
+    starts = re.findall(r"silence_start:\s*([\d.]+)", scan)
+    ends = re.findall(r"silence_end:\s*([\d.]+)", scan)
+    cuts = []
+    for raw_start, raw_end in zip(starts, ends):
+        start, end = float(raw_start), float(raw_end)
+        if end - start < 1.2:
+            continue
+        cut_start = round((start + .45) * FPS) / FPS
+        cut_end = round((end - .65) * FPS) / FPS
+        if cut_end - cut_start > .08:
+            cuts.append((cut_start, cut_end))
+    if not cuts:
+        shutil.copy2(original, destination)
+        shutil.copy2(original_srt, subtitles)
+        return destination
+    kept = []
+    position = 0.0
+    for start, end in cuts:
+        kept.append((position, start))
+        position = end
+    kept.append((position, duration))
+    filters = []
+    for index, (start, end) in enumerate(kept):
+        filters.append(f"[0:v]trim=start={start:.4f}:end={end:.4f},setpts=PTS-STARTPTS[v{index}]")
+        filters.append(f"[0:a]atrim=start={start:.4f}:end={end:.4f},asetpts=PTS-STARTPTS[a{index}]")
+    labels = "".join(f"[v{i}][a{i}]" for i in range(len(kept)))
+    filters.append(f"{labels}concat=n={len(kept)}:v=1:a=1[v][a]")
+    subprocess.run([
+        ffmpeg, "-y", "-loglevel", "error", "-i", str(original),
+        "-filter_complex", ";".join(filters), "-map", "[v]", "-map", "[a]",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
+        "-r", str(FPS), "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart",
+        str(destination),
+    ], check=True)
+
+    def retimed(value):
+        removed = 0.0
+        for start, end in cuts:
+            if value >= end:
+                removed += end - start
+            elif value > start:
+                return start - removed
+        return value - removed
+
+    subtitles.write_text("\n\n".join(
+        f"{index}\n{srt_time(retimed(start))} --> {srt_time(retimed(end))}\n{textwrap.fill(words, width=80)}"
+        for index, (start, end, words) in enumerate(scenes, 1)
+    ) + "\n", encoding="utf-8")
+    print(f"Removed {sum(end-start for start, end in cuts):.1f}s across {len(cuts)} long pauses", flush=True)
+    return destination
+
+
 def finalize_video(ffmpeg):
     subtitles = OUTPUT / "CONTRA_hackathon_demo.srt"
     ass = OUTPUT / "CONTRA_hackathon_demo.ass"
@@ -389,6 +453,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
         "-movflags", "+faststart", captioned.name,
     ], cwd=OUTPUT, check=True)
+    shutil.copy2(captioned, OUTPUT / "CONTRA_hackathon_demo_uncut.mp4")
+    shutil.copy2(subtitles, OUTPUT / "CONTRA_hackathon_demo_uncut.srt")
+    tighten_video(ffmpeg)
     return captioned
 
 
@@ -511,7 +578,12 @@ def main():
 
 
 if __name__ == "__main__":
-    if "--finalize-only" in sys.argv:
+    if "--tighten-only" in sys.argv:
+        print(tighten_video(executable()))
+    elif "--finalize-only" in sys.argv:
+        original_srt = OUTPUT / "CONTRA_hackathon_demo_uncut.srt"
+        if original_srt.exists():
+            shutil.copy2(original_srt, OUTPUT / "CONTRA_hackathon_demo.srt")
         print(finalize_video(executable()))
     else:
         main()

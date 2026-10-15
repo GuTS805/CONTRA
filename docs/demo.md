@@ -2,7 +2,7 @@
 
 Start the server with `python -m contra.server`, open `http://localhost:8000` and click **Continue as guest**. The script below uses the synthetic scenarios, whose outcomes are known. To finish with real data, click **Load Infosys** on the terminal and run INFY.NS. Open a cited excerpt and follow its SEC EDGAR link, then ask "Do they have any debt?" to get the Form 20-F liquidity passage.
 
-For a shorter submission walkthrough, use the [2:24 narrated recording](assets/CONTRA_demo_narrated.mp4) and its [SRT subtitles](assets/CONTRA_demo_narrated.srt). It records a real local guest session against synthetic fixtures and shows the three-investor comparison table. Rebuild it with `python scripts/make_demo_video.py`; the recorder needs Edge or Chrome, ffmpeg and `OPENAI_API_KEY` for synthesized narration. Voice clips are cached under `data/demo/`, and `--finalize-only` remuxes the cached voice and recording without requesting new speech.
+For a shorter submission walkthrough, use the [1:40 narrated recording](assets/CONTRA_demo_narrated.mp4) and its [SRT subtitles](assets/CONTRA_demo_narrated.srt). It records a real local guest session against synthetic fixtures and shows the three-investor comparison table. Rebuild it with `python scripts/make_demo_video.py`; the recorder needs Edge or Chrome, ffmpeg and `OPENAI_API_KEY` for synthesized narration. Voice clips are cached under `data/demo/`; `--finalize-only` remuxes the cached voice, and `--tighten-only` trims long gaps without re-recording the browser.
 
 | Time | Action | What it proves |
 | --- | --- | --- |
