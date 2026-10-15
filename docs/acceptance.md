@@ -4,7 +4,7 @@ The supplied blueprint is the target specification. This table records what the 
 
 | Blueprint test | Current proof | Status |
 | --- | --- | --- |
-| T01 — Valid synthetic analysis | ALPHA.NS HTTP analysis returns all three dimensions, as-of and data mode. | Local pass |
+| T01 — Valid synthetic analysis | ALPHA.NS HTTP analysis returns all four dimensions, as-of and data mode. | Local pass |
 | T02 — Agent overlap | Timed Market, Research and Risk intervals overlap; concurrency assertion runs in tests. | Local pass |
 | T03 — Cited research source opens | Run-scoped evidence endpoint returns exact frozen excerpt, date, locator and hash. | Local pass |
 | T04 — Same market, changed investor | A/B tests assert equal market hash and signals with different suitability. | Local pass |
@@ -23,11 +23,16 @@ The supplied blueprint is the target specification. This table records what the 
 | T18 — Grounded model briefings | Code verifies each model-written Market/Research briefing: allowed citations only, no digits, no advice or judgment words, no contradiction; failures fall back to labeled rule summaries. In a real gpt-4.1-nano warm-up, 14 of 14 briefings passed after these rules, and each was reviewed by hand. | Local pass |
 | T19 — Semantic filing search | Hybrid embeddings + TF-IDF on held-out paraphrases: Recall@3 100% versus 86% for keywords only; 4 of 4 unrelated questions abstain. | Local pass (synthetic corpus) |
 | T20 — Real filings | 8 Infosys excerpts from SEC EDGAR: `python -m contra.public_filings` confirms all 8 match their filings exactly. Research claims must match an exact quote's topic, direction, quality words and negation; the real "guidance revised upward" error is a regression test. | Local pass |
-| T12 — Production inspection | Hosted-mode test checks public Host, Origin, Secure/HttpOnly cookie and HSTS. Dockerfile and Render Blueprint are included. The container was not built here (Docker unavailable) and no deployment has been made. | Deploy-ready; not deployed |
+| T12 - Hosted operation | Public health endpoint returned OK on 15 October 2026. GitHub CI for commit 30438fe passed, including UI runtime and container checks. This is health/build verification, not a complete production user journey. | Verified with stated scope |
+| T21 - Institutional flows | Official NSE endpoint fetched and parsed; synthetic/live isolation, arithmetic, as-of, missing/stale data and frozen evidence checks. | Local pass; live source verified |
+| T22 - Precise sizing | Near-cap holdings use original amounts; residual sector excess is disclosed; unheld stock does not receive a sell instruction. | Regression tested |
+| T23 - Visible degradation evaluation | Seven fault-injection checks execute on Evaluation with expected and observed results. | Local pass |
 
-## Remaining blueprint work
+## Verification boundaries
 
-- Live model requests have not been verified against an account. The optional adapter is tested with mocked responses and falls back deterministically when disabled or invalid.
-- Accounts and hosting configuration exist, but no deployment has been made. Free-tier hosting has a temporary disk; durable storage needs a persistent disk or a managed database.
-- The synthetic corpus and lexical retrieval do not establish real filing quality or financial predictive performance.
-- Compliance review and licensed market-data access are prerequisites for any real investor-facing use.
+- The 15 October audit added sizing regressions and visible degradation checks. Run the test suite for the current count; prior counts in the improvement log refer to earlier commits.
+- The prior FII/DII browser check inspected four cards, source drawer and mobile overflow. Current evaluation UI is checked separately before handoff.
+- No new paid model requests were made in this audit. Warm-up artifacts and prior manual verification are historical evidence, not a fresh production model test.
+- Free-tier hosting has temporary storage. A persistent disk or managed database is still needed for durable accounts and reports.
+- Synthetic retrieval and scenario checks do not establish real filing quality or financial predictive performance.
+- The Wild Bugs participant dashboard can contain additional submission requirements. Public problem statement mapping is in [wild-bugs-submission.md](wild-bugs-submission.md).

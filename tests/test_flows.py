@@ -1,6 +1,7 @@
 import asyncio
 from copy import deepcopy
 import sqlite3
+from http.client import IncompleteRead
 import unittest
 from unittest.mock import patch
 
@@ -88,6 +89,16 @@ class FlowTests(unittest.TestCase):
                                      snapshot=prepare("ALPHA.NS", AS_OF, institutional_flows=[])))
         self.assertEqual(with_flows["recommendation"]["action"], without["recommendation"]["action"])
         self.assertNotEqual(with_flows["market_snapshot_hash"], without["market_snapshot_hash"])
+
+    def test_truncated_provider_response_does_not_break_analysis(self):
+        db = sqlite3.connect(":memory:")
+        self.addCleanup(db.close)
+        flows._last_attempt.clear()
+        with patch.object(flows, "fetch", side_effect=IncompleteRead(b"[", 100)):
+            records, warnings = flows.history(db, "2026-10-14")
+        self.assertEqual(records, [])
+        self.assertTrue(warnings)
+        self.assertEqual(flows.signal({"as_of": "2026-10-14", "institutional_flows": records})["status"], "UNAVAILABLE")
 
 
 if __name__ == "__main__":

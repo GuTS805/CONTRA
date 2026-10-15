@@ -90,7 +90,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(report["market_snapshot"]["bars"][0]["timezone"], "Asia/Kolkata")
         self.assertFalse(report["market_snapshot"]["bars"][0]["adjusted"])
         self.assertEqual(report["investor_snapshot"]["id"], "demo_conservative")
-        self.assertEqual(report["method_version"], "rules-1.3")
+        self.assertEqual(report["method_version"], "rules-1.4")
         self.assertEqual(report["market_snapshot"]["document_ids"],
                          [d["id"] for d in documents() if d["ticker"] == "ALPHA.NS" and d["published_at"] <= AS_OF])
         self.assertEqual(len(report["market_snapshot"]["documents"]), len(report["market_snapshot"]["document_ids"]))
@@ -110,6 +110,8 @@ class DemoTests(unittest.TestCase):
         matrix = asyncio.run(scenario_matrix(profile(self.db, "demo_conservative"), profile(self.db, "demo_growth")))
         self.assertEqual(matrix["passed"], matrix["total"])
         self.assertEqual(matrix["citation_fabrication_count"], 0)
+        self.assertEqual(matrix["robustness"]["total"], 7)
+        self.assertEqual(matrix["robustness"]["passed"], 7)
         self.assertEqual(matrix["retrieval_recall_at_3"], 1.0)
 
     def test_sector_limit_changes_suitability(self):
@@ -256,6 +258,31 @@ class DemoTests(unittest.TestCase):
         # Technology is 40,000 of 100,000; a 30% sector cap needs a 10,000 trim, larger than the single-name excess.
         self.assertEqual(recommendation["action"], "REDUCE_EXPOSURE")
         self.assertEqual(recommendation["sizing"]["change_value"], -10000)
+
+    def test_sizing_uses_amounts_not_rounded_display_weights(self):
+        update_profile(self.db, "demo_growth", {"positions": [
+            {"ticker": "GAMMA.NS", "value": 100004}, {"ticker": "CASH", "value": 899996}],
+            "max_single_asset_weight": .10, "max_sector_weight": 1})
+        recommendation = self.analyze("GAMMA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(recommendation["sizing"]["current_value"], 100004)
+        self.assertEqual(recommendation["sizing"]["change_value"], -4)
+        update_profile(self.db, "demo_growth", {"positions": [
+            {"ticker": "GAMMA.NS", "value": 99996}, {"ticker": "CASH", "value": 900004}]})
+        recommendation = self.analyze("GAMMA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(recommendation["sizing"]["change_value"], 4)
+
+    def test_sector_excess_cannot_be_cleared_by_selected_stock(self):
+        update_profile(self.db, "demo_growth", {"max_sector_weight": .10})
+        recommendation = self.analyze("ALPHA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(recommendation["sizing"]["change_value"], -15000)
+        self.assertEqual(recommendation["sizing"]["remaining_sector_excess"], 15000)
+        self.assertIn("still exceed", recommendation["headline"])
+        update_profile(self.db, "demo_growth", {"positions": [
+            {"ticker": "BETA.NS", "value": 80000}, {"ticker": "CASH", "value": 20000}]})
+        recommendation = self.analyze("ALPHA.NS", "demo_growth")["recommendation"]
+        self.assertEqual(recommendation["action"], "AVOID_ADDING")
+        self.assertIn("Do not open", recommendation["headline"])
+        self.assertEqual(recommendation["sizing"]["change_value"], 0)
 
     def test_ask_filings_is_extractive_and_abstains(self):
         report = self.analyze("ALPHA.NS")

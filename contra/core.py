@@ -16,7 +16,7 @@ from collections import Counter
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, documents
 from . import llm, flows
 
-METHOD_VERSION = "rules-1.3"
+METHOD_VERSION = "rules-1.4"
 _CLOCK_ANCHOR = datetime.now(timezone.utc)
 _MONOTONIC_ANCHOR = perf_counter_ns()
 
@@ -549,8 +549,10 @@ def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict, sectors
     else:
         insight = portfolio_insights(profile, sectors)
         total = insight["total_value"]
-        held = risk["position_weight"] * total
-        sector_value = risk["sector_weight"] * total
+        # Display weights are rounded. Sizing must use original portfolio amounts.
+        held = sum(p["value"] for p in profile["positions"] if p["ticker"] == ticker)
+        sector_value = sum(p["value"] for p in profile["positions"] if p["ticker"] != "CASH"
+                           and _sector_of(p["ticker"], sectors) == risk["sector"])
         cap, sector_cap = risk["single_asset_cap"], risk["sector_cap"]
         hold = f"Hold {ticker}" if held > 0 else f"Do not open a position in {ticker}"
         if risk.get("breach"):
@@ -558,9 +560,18 @@ def recommend(ticker: str, profile: dict, agents: dict, synthesis: dict, sectors
             action = "REDUCE_EXPOSURE"
             rule = "A configured position or sector limit is breached, so the limit takes precedence over market signals."
             headline = f"Reduce {ticker} by about {trim:,.0f} to bring it within this profile's limits."
+            residual = max(0, sector_value - trim - sector_cap * total)
+            if residual > 0:
+                headline = (f"Reduce {ticker} by up to {trim:,.0f}. The sector would still exceed its cap by about {residual:,.0f}; review other holdings."
+                            if held > 0 else
+                            f"Do not open a position in {ticker}. Other holdings already exceed the sector cap by about {residual:,.0f}.")
+                if held == 0:
+                    action = "AVOID_ADDING"
+                reasons.append({"text": "Reducing this stock alone cannot clear the sector breach.", "evidence_ids": profile_ids})
             sizing = {"current_value": round(held, 2), "current_weight": risk["position_weight"],
                       "change_value": -round(trim, 2), "target_weight": round((held - trim) / total, 4),
-                      "portfolio_value": total, "assumption": insight["sizing_assumption"]}
+                      "portfolio_value": total, "remaining_sector_excess": round(residual, 2),
+                      "assumption": insight["sizing_assumption"]}
             if risk.get("single_asset_breach"):
                 reasons.append({"text": f"{ticker} is {risk['position_weight']:.0%} of the portfolio; the cap is {cap:.0%}.",
                                 "evidence_ids": profile_ids})
@@ -690,6 +701,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
                                 **({"institutional_flows": snapshot["institutional_flows"]} if "institutional_flows" in snapshot else {}),
                                 "document_ids": [d["id"] for d in snapshot["documents"]]},
             "investor_snapshot": profile,
+            "sector_snapshot": dict(sectors or {}),
             "signals": signals, "agents": agents, "synthesis": synthesis, "recommendation": recommendation,
             "evidence": evidence,
             "metrics": {"wall_latency_ms": wall_ms,

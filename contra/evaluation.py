@@ -4,10 +4,12 @@ from __future__ import annotations
 import asyncio
 import json
 import platform
+from copy import deepcopy
+from datetime import date, timedelta
 from pathlib import Path
 
-from . import embeddings
-from .core import analyze, hybrid_rank, prepare, retrieve
+from . import embeddings, flows
+from .core import analyze, hybrid_rank, prepare, retrieve, numeric_signals
 from .fixtures import AS_OF
 
 HELDOUT_RETRIEVAL = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "heldout_retrieval.json"
@@ -102,7 +104,37 @@ async def scenario_matrix(conservative: dict, growth: dict) -> dict:
             "retrieval_case_count": len(retrieval_cases),
             "citation_fabrication_count": fabricated,
             "semantic_retrieval": semantic_evaluation(),
+            "robustness": robustness_checks(),
             "note": "Curated synthetic fixtures test implementation behavior, not future returns."}
+
+
+def robustness_checks() -> dict:
+    """Visible fault-injection checks. These are regression cases, not held-out accuracy."""
+    base = prepare("ALPHA.NS", AS_OF)
+    rows = []
+    def check(name, expected, observed):
+        rows.append({"name": name, "expected": expected, "observed": observed, "passed": expected == observed})
+    missing = {**base, "institutional_flows": []}
+    check("missing_flows_abstain", "UNAVAILABLE", flows.signal(missing)["status"])
+    check("opposite_flows_remain_divergent", "DIVERGENT", flows.signal(base)["label"])
+    stale = {**base, "as_of": (date.fromisoformat(AS_OF) + timedelta(days=7)).isoformat()}
+    check("stale_flows_abstain", "UNAVAILABLE", flows.signal(stale)["status"])
+    short = {**base, "bars": base["bars"][-20:]}
+    check("short_price_history_abstains", "UNAVAILABLE", numeric_signals(short)["momentum"]["status"])
+    invalid = deepcopy(base)
+    invalid["bars"][-1]["volume"] = 0
+    check("zero_volume_abstains", "UNAVAILABLE", numeric_signals(invalid)["volume"]["status"])
+    check("future_filings_excluded", 0, len(prepare("DELTA.NS", AS_OF)["documents"]))
+    corrupt = deepcopy(base["institutional_flows"][0])
+    corrupt["groups"]["DII"]["net"] += 1
+    observed = "ACCEPTED"
+    try:
+        prepare("ALPHA.NS", AS_OF, institutional_flows=[corrupt])
+    except ValueError:
+        observed = "REJECTED"
+    check("changed_flow_evidence_rejected", "REJECTED", observed)
+    return {"passed": sum(row["passed"] for row in rows), "total": len(rows), "cases": rows,
+            "method": "Deterministic fault injection on synthetic inputs. No provider requests or model calls. These are regression checks, not held-out financial prediction accuracy."}
 
 
 async def benchmark_fixed(profile: dict, repetitions: int = 10) -> dict:

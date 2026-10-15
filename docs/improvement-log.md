@@ -134,3 +134,42 @@ Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at
 - Added a third sample profile, Starter: a newer, cash-heavy investor with a 15% single-name cap and a 40% sector cap, who does not hold ALPHA. Existing accounts receive it on their next profile listing.
 - The report has a new **Same evidence, every investor** panel. It runs the frozen snapshot for every saved profile and shows each holding, action and headline, with a check that the market snapshot is identical.
 - On ALPHA the three actions differ: reduce by about 5,000, hold and review, do not open a position. On GAMMA the room to add is 5,000, 25,000 and 10,000.
+
+
+## 15 October 2026: Wild Bugs PS 04 audit
+
+Official weights were taken from the problem statement linked on the Wild Bugs overview, not from Arkiv. The participant dashboard itself was not accessible to this audit.
+
+### Fixed
+
+- P1: sizing reconstructed holdings from rounded percentages. Amounts now come from original saved positions; near-cap regressions cover both adding and trimming.
+- P1: a full exit from one stock could leave a sector breach while claiming limits were cleared. The recommendation now reports residual excess; an unheld stock is not given a sell instruction.
+- P1: interrupted NSE HTTP responses could escape the graceful fallback. Truncated responses now leave flows unavailable or use eligible cache.
+- P2: profile comparisons now retain sector classifications as well as original bars, filings and flows.
+- P2: Evaluation runs seven visible fault-injection checks, with expected and observed values. They are explicitly regression checks, not financial accuracy measurements.
+- P2: architecture and acceptance documentation contained obsolete synthetic-only and not-deployed claims. Updated to match verified capabilities and verification limits.
+- P2: refreshed the demo sequence to include the fourth signal and an explicit unsupported weather question.
+
+### Verification
+
+- `python -m unittest discover -s tests`: 77 tests passed after these changes.
+- Public deployment `/health`: OK; model and semantic-search configuration enabled. This does not prove a paid model call or the full deployed user journey.
+- Public GitHub CI for prior commit `30438fe`: success, including Python, UI runtime and container checks. Current changes require their own CI run after publication.
+- Updated video is recorded with model and embedding calls disabled, using an isolated local database.
+
+### Internal rubric review, not an official judging score
+
+These estimates identify remaining work, not a probability of winning.
+
+| Criterion | Before | After | Maximum | Evidence and remaining gap |
+| --- | ---: | ---: | ---: | --- |
+| Signal analysis | 14 | 14 | 20 | Four cited dimensions; heuristic thresholds remain uncalibrated |
+| Agent execution and synthesis | 16 | 16 | 20 | Three parallel contracts, explicit conflict and partial states |
+| Retrieval and attribution | 11 | 11 | 15 | Exact passages and small-corpus evaluation; larger real-corpus validation remains |
+| Personalization and risk | 11 | 13 | 15 | Exact sizing and residual exposure corrected; profiles remain manually valued |
+| Engineering and reliability | 7 | 8 | 10 | More failure coverage; temporary hosting storage remains |
+| Evaluation quality | 6 | 7 | 10 | Visible degraded-input checks; no return backtest |
+| Explanation and commercial fit | 7 | 8 | 10 | Rubric proof map and updated demo; no user/pricing validation |
+| Total | 72 | 77 | 100 | Provisional internal review |
+
+Remaining external requirements: inspect the participant dashboard for exact submission fields and rules; upload a playable video; confirm the submitted revision is deployed; keep the app available during judging. No automatic submission or paid hosting change was made.

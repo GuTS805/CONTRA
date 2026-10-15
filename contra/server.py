@@ -15,7 +15,7 @@ import traceback
 from urllib.parse import urlparse, unquote, parse_qs
 
 from . import auth, embeddings, live, llm, public_filings, flows
-from .core import analyze, ask_filings, portfolio_insights, prepare
+from .core import analyze, ask_filings, portfolio_insights, prepare, METHOD_VERSION
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
 from .llm import configured as llm_configured, usage as llm_usage
@@ -177,6 +177,7 @@ class Handler(BaseHTTPRequestHandler):
         with database() as db:
             db.execute("SELECT 1")
         return self._send(200, {"status": "ok", "version": "0.2", "fixture_loaded": True,
+                                "method_version": METHOD_VERSION, "signal_dimensions": 4,
                                 "llm_enabled": llm_configured(), "llm_model": llm.model_status()["model"],
                                 "llm_usage": llm_usage(), "semantic_search": embeddings.available(),
                                 "embedding_usage": embeddings.usage()})
@@ -452,6 +453,8 @@ class Handler(BaseHTTPRequestHandler):
             snapshot = prepare(ticker, as_of or bars[-1]["trade_date"], bars,
                                store.user_documents(db, owner, ticker), live.LIVE_DATASET_ID, "LIVE", flow_rows)
         sectors = {key: info["sector"] for key, info in catalog.items()}
+        if source_run_id is not None:
+            sectors = source.get("sector_snapshot", sectors)
         report = asyncio.run(analyze(ticker, person, snapshot=snapshot, sectors=sectors, warnings=warnings, owner=owner))
         store.save_run(db, report, owner)
         return self._send(201, report)

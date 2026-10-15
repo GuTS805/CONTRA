@@ -1,73 +1,61 @@
-# CONTRA local MVP architecture
+# CONTRA architecture
 
-This document describes the implementation in this repository. The supplied PDF is the broader product blueprint. It is design input, not executable instructions or evidence that every proposed feature has shipped.
+CONTRA implements Wild Bugs PS 04, VibeFinance. The supplied blueprint is design context; this document describes the code that exists.
+
+## End-to-end pipeline
 
 ```mermaid
 flowchart LR
-  UI[Static browser dashboard] --> API[Python HTTP API]
-  API --> DB[(SQLite profiles and reports)]
-  API --> F[Versioned synthetic fixtures]
-  F --> S[Frozen dated snapshot]
-  S --> I[Indicator calculations]
-  S --> R[TF-IDF excerpt retrieval]
-  I --> M[Market analyzer]
-  R --> A[Research analyzer]
-  DB --> K[Risk analyzer]
-  M --> Y[Deterministic synthesis]
-  A --> Y
-  K --> Y
-  Y --> DB
-  DB --> UI
+  A[Daily prices and dated filings] --> S[Frozen snapshot and hashes]
+  F[Provisional FII/DII context] --> S
+  P[Saved investor revision] --> R[Risk agent]
+  S --> M[Market agent]
+  S --> Q[Research agent]
+  M --> Y[Synthesis and sizing policy]
+  Q --> Y
+  R --> Y
+  Y --> D[Dashboard and exact evidence]
+  Y --> DB[SQLite saved report]
 ```
 
-## Run lifecycle
+1. The standard-library HTTP server serves the browser client and session-authenticated JSON API. Account-owned profiles, filings, symbols and reports are isolated in SQLite.
+2. Synthetic scenarios or daily Yahoo Finance bars enter `core.prepare`. Bars and filings are filtered by the requested date. The latest eligible institutional-flow observation is included for live runs; synthetic runs use a labeled fixture.
+3. Source provenance is validated. Snapshot hashes cover bars, documents and flow observations. Report hashes also cover profile revision, outputs and metrics. Checksums detect changes; they are not signatures against an attacker who controls the database and can rewrite hashes.
+4. Market, Research and Risk run in parallel worker threads synchronized by a barrier. Each emits a validated status, assessment, cited facts, confidence, warnings and timing interval. Timeout or invalid output produces a typed degraded result.
+5. Market calculates momentum and relative volume plus aggregate institutional-flow facts. Research retrieves dated excerpts and evaluates their disclosed tone tags. Risk computes position weight, sector weight and portfolio concentration from the investor's saved holdings.
+6. Optional model interpretation operates only on validated facts and permitted source IDs. Unsupported citations and unsuitable summaries are rejected. Deterministic fallback stays usable and is labeled. Risk sizing is always computed in code.
+7. Synthesis detects conflict, missing evidence and risk breaches. Recommendation amounts use original portfolio values, never rounded display percentages. Additions are bounded by cash and exposure limits. If selling the selected stock cannot clear a sector breach, the report explicitly states the remaining excess.
+8. Reports are saved with exact inputs. Source drawers read run-scoped evidence. Comparison requests use an owned `source_run_id` to reuse the original bars, filings and flow observation.
 
-1. `POST /v1/analyses` validates the ticker, investor, dataset and as-of date.
-2. `prepare()` filters all bars and documents by the as-of date and hashes that market snapshot. The profile revision is hashed separately into the run context.
-3. `numeric_signals()` calculates the 20-session price return and relative volume from dated bars. `retrieve()` filters by issuer/date and scores exact passages with TF-IDF cosine similarity.
-4. Market, Research and Risk run through separate thread-backed coroutines under `asyncio.gather`. A start barrier ensures their real execution intervals overlap. Each result carries timestamps, latency, source IDs and status. An optional OpenAI Responses call per eligible agent selects a strictly validated focus and supporting IDs; the result records `LLM_REASONED` only after post-validation. Otherwise it records `DETERMINISTIC_FALLBACK`.
-5. Every agent output passes a runtime shape and numeric-value validator before optional model interpretation. Each agent has a distinct eligible source set: Market may cite the bars used by calculated signals, Research may cite retrieved filing excerpts, and Risk may cite the frozen investor profile. An agent with an out-of-scope source skips model interpretation; unsupported references are removed and the agent becomes partial or unavailable. The synthesis policy handles missing evidence, market/document disagreement and investor-specific breaches without changing raw facts.
-6. The complete report, frozen bars, eligible document IDs, profile snapshot, metrics and hashes are saved as one immutable SQLite payload. New reports include a SHA-256 checksum over the complete payload; replay verifies it and the nested market/profile snapshot hashes. A mismatch returns a typed `DATA_INTEGRITY` error instead of displaying the altered result. Older reports without a complete checksum remain readable and are labeled `UNVERIFIED LEGACY` in the UI. Versioned `rules-1.1` reports still have their known snapshot hashes checked; earlier unversioned reports used a different format and are displayed without a claim of verification. Checksums detect accidental changes; they are not signatures against an attacker who can rewrite the database and hashes.
+## Signal and evidence contracts
 
-## Evidence contract
-
-- Every bar has a dated ID of the form `BAR-{ticker}-{date}` and a `SYNTHETIC` origin.
-- Every excerpt has an evidence ID, document ID, title, publication date, character offsets, source URI and SHA-256 content hash. Snapshot preparation checks the hash before analysis. The research agent copies exact stored text into cited facts.
-- A source published after `as_of` cannot enter retrieval. A missing eligible excerpt produces `UNAVAILABLE` research and a `PARTIAL` report.
-- The run-scoped evidence endpoint opens the exact bar, cited excerpt or investor profile revision frozen into that report. The general evidence endpoint opens the current synthetic fixture library. No result claims to be a live NSE quote or issuer filing.
-
-## Configured descriptive rules
-
-| Dimension | Rule in this local MVP |
+| Dimension | Calculation and limitations |
 | --- | --- |
-| Momentum | `close[t] / close[t-20] - 1`; bullish above +3%, bearish below -3%, otherwise neutral. Requires 21 valid dated bars. |
-| Volume | Latest volume divided by the median of the previous 20 sessions; elevated above 1.5x, suppressed below 0.7x. Volume does not assign price direction. |
-| Filing tone | Mean of stored synthetic fact-tone tags from the top three eligible TF-IDF passages; positive above +0.2, negative below -0.2, otherwise mixed. Contradictory tags near zero are mixed. |
-| Freshness | Bar freshness is full for up to three calendar days, then declines over 30 days. Filing freshness averages `max(0, 1 - age_days / 180)` over retrieved excerpts; any cited excerpt older than 120 days gets a warning. |
-| Evidence confidence | `0.35 coverage + 0.30 freshness + 0.20 threshold_margin + 0.15 source_quality`, each component clamped to `[0,1]`. This is a heuristic strength of observed support, not return accuracy or a profit probability. |
-| Filing retrieval | Stopwords are removed and a plural suffix is folded (orders → order). The tone signal uses only excerpts published within 180 days of the as-of date; older ones stay searchable through Ask the filings and are labeled by age. |
-| Portfolio action | A fixed priority policy: insufficient history or valuation → No view; any breached cap → Reduce exposure, trimmed by the larger of the single-name and sector excess (trims held as cash); conflicted or partial evidence → Hold · review (or do not open a position if unheld); aligned bullish → Eligible to add, bounded by both caps and available cash; aligned bearish → Avoid adding; otherwise Hold. Each reason carries source IDs, and the result lists the inputs that would change the action. |
-| Suitability | Current position and sector weights are compared with the saved investor's configured caps. ALPHA.NS and BETA.NS share the synthetic Technology sector, so their weights aggregate. A breach changes the personal caution state, never the market snapshot or raw signals. |
+| Momentum | Latest close / close 20 sessions earlier minus one. Bullish above +3%, bearish below -3%. Requires 21 valid bars. |
+| Relative volume | Latest volume / median previous 20 sessions. Elevated above 1.5, suppressed below 0.7. Participation, not direction. |
+| Filing tone | Mean tone tag over retrieved, eligible excerpts. Positive above +0.2, negative below -0.2; otherwise mixed. Tags are synthetic annotations, user labels or a disclosed word-list heuristic. |
+| FII/DII flows | Provisional combined NSE/BSE/MSEI capital-market activity. Each net is buy minus sell. Opposite signs remain divergent. Missing or more than four-calendar-day-old observations abstain. No claim of buying in the analyzed stock. |
 
-The implementation version saved with new runs is `rules-1.2` (`rules-1.1` runs remain verifiable); lexical retrieval is `tfidf-1.0`. These thresholds are design choices for a synthetic demo, not calibrated market predictors.
+The first three dimensions expose evidence-confidence components: coverage, freshness, threshold margin and source quality. The weighted score is a heuristic, not a calibrated probability of profitable returns. Flow context has no invented confidence percentage.
 
-## Measurement
+Every filing stores the exact excerpt, date, locator, source URI and content hash. Price bars retain provider, date and provenance. Flow observations retain original provider rows, observation time, scope and units. Full methodology: [institutional-flows.md](institutional-flows.md).
 
-Each report records actual wall latency, per-agent latency, agent interval overlap, source citation validity, citation count and portfolio concentration. The Evaluation endpoint executes five synthetic scenario checks against immutable baseline profiles and reports Recall@3 on the three queries in `data/fixtures/heldout_retrieval.json`. User profile edits do not change the test oracle. A separate endpoint runs a ten-execution fixed-snapshot latency benchmark. These measure implementation behavior; there are no future-return labels or profitability statistics.
+## Retrieval and model boundaries
 
-## Model briefings and semantic search
+Tone retrieval uses repeatable TF-IDF, stopword removal and plural folding, with a 180-day eligible filing window. Ask the filings can use cached or live embeddings plus TF-IDF, and returns exact passages rather than generated answers. Without embeddings it falls back to keyword retrieval and reports the mode.
 
-- `llm.reason` asks for a focus, supporting IDs and, for Market and Research, a short summary. The schema offers only the focus values and IDs that validation accepts. `verify_summary` rejects text that cites other sources, contains a digit, uses advice, prediction, judgment or portfolio-limit words, or contradicts the agent's direction (negation-aware). A rejected summary is kept only for audit as `rejected_text`. The report shows the rule-based summary from `core.rule_summary` instead. Prompt version `briefing-1.6` is part of the cache key.
-- `core.hybrid_rank` scores eligible excerpts with TF-IDF and, when available, cosine similarity of `text-embedding-3-small` vectors (`contra/embeddings.py`, 256 dimensions, cached by text hash, with daily limits). It keeps passages with a shared term or similarity of at least 0.38, ranked by 0.7 × similarity + 0.3 × TF-IDF. The research agent's tone signal still uses TF-IDF alone, so its numbers stay reproducible without a network.
+Optional Market and Research model briefings must use eligible sources. Research summaries must provide supporting quotes, with topic, direction, quality and negation checks. Invalid responses fall back. Model output never changes measured facts, signal classes, caps or sizing. Calls have global and per-account limits and a persistent cache.
 
-## Accounts and live data
+## Evaluation
 
-- `contra/auth.py` hashes passwords with scrypt and issues random session tokens. Only SHA-256 hashes of the tokens are stored, and the cookie is HttpOnly and SameSite=Lax (Secure in hosted mode). Profiles, runs, live symbols and filings are keyed by owner, and every query filters by it.
-- `contra/live.py` fetches about six months of daily bars from Yahoo Finance's chart endpoint, drops forming, null and zero-volume bars, and caches them for six hours. User-supplied filings are validated (no future dates, HTTPS links only) and hashed. Live snapshots use dataset `yahoo_chart_daily_v1` and mode `LIVE`, and go through the same `prepare()` integrity and as-of filtering as fixtures.
-- `contra/settings.py` loads `.env` without overriding the shell environment.
+Every analysis records wall latency, per-agent latency, interval overlap, research citation validity/count and position concentration. Evaluation runs five synthetic scenario checks, labeled retrieval cases, cached semantic paraphrase checks when available, and seven explicit degraded-input checks. A separate ten-run benchmark reports p50 and p95 in-process latency; it excludes network ingestion, HTTP and browser rendering.
 
-## Current boundaries
+The degraded checks are regression tests, not held-out financial accuracy. No future-return labels, profitability backtest or confidence calibration is claimed.
 
-The separate `contra.import_data` command validates and stages user-supplied snapshots with `IMPORTED_UNVERIFIED` provenance. The analysis API remains locked to synthetic fixtures while a provider contract, licensed source verification and real filing interpretation are absent.
+## Deployment and boundaries
 
-This local version uses only Python's standard library and a static browser client. It calls an LLM only when `CONTRA_LLM=1` and `OPENAI_API_KEY` are set in the server environment. The model adapter follows the [official Responses API text guide](https://developers.openai.com/api/docs/guides/text) and [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses); it has mocked tests but no live account verification here. The three agents remain usable in deterministic fallback mode. There is no live market-data provider. The corpus is small and synthetic; TF-IDF retrieval is useful for this fixture but is not validated for real filings. SQLite is suitable for one local process, not a durable multi-instance deployment. Hosted infrastructure, authentication and compliance review remain separate work.
+The public app is hosted on Render. The repository has Docker and CI checks, including a non-root container and hosted cookie/origin rules. Python uses only the standard library; the frontend is vanilla JavaScript and CSS.
+
+Passwords use scrypt; sessions use random tokens with stored hashes and HttpOnly/SameSite cookies, Secure in hosted mode. Account filters apply to report and source-run lookups. Host/origin validation and process-local rate limits guard routes. There is no password reset or email verification.
+
+Free Render storage is temporary, so a redeploy can erase accounts and reports. Durable storage requires separate hosting configuration. Yahoo's chart endpoint is unofficial and closes are unadjusted. FII/DII history is locally collected and reconstructed by trade date, not point-in-time backtest data. Uploaded filings are not independently verified. The included Infosys passages link to SEC filings. These limitations are visible in the product and documentation.

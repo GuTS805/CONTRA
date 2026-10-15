@@ -230,6 +230,14 @@ class Recorder:
             self.cdp.command("Input.insertText", {"text": letter})
             self.frame()
 
+    def replace_text(self, value):
+        self.cdp.command("Input.dispatchKeyEvent", {"type": "keyDown", "key": "a", "code": "KeyA", "windowsVirtualKeyCode": 65, "modifiers": 2})
+        self.cdp.command("Input.dispatchKeyEvent", {"type": "keyUp", "key": "a", "code": "KeyA", "windowsVirtualKeyCode": 65, "modifiers": 2})
+        self.hold(.3)
+        self.cdp.command("Input.dispatchKeyEvent", {"type": "keyDown", "key": "Backspace", "windowsVirtualKeyCode": 8})
+        self.cdp.command("Input.dispatchKeyEvent", {"type": "keyUp", "key": "Backspace", "windowsVirtualKeyCode": 8})
+        self.type_text(value)
+
     def scene(self, text, action, minimum=0):
         start = self.seconds
         action()
@@ -347,7 +355,7 @@ def main():
                            lambda: recorder.click("#guest", scroll=False), 9)
             recorder.wait(".terminal-hero")
             recorder.scene("Three agents inspect a frozen snapshot. Every conclusion links back to its source.",
-                           lambda: recorder.hold(9), 9)
+                           lambda: recorder.hold(7), 7)
             recorder.scene("Choose ALPHA.NS, a clearly labeled synthetic scenario with known outcomes.",
                            lambda: recorder.click('[data-scenario="ALPHA.NS"]'), 12)
             recorder.scene("The Conservative profile has a 10 percent single asset cap. Now run the analysis.",
@@ -361,6 +369,8 @@ def main():
                            lambda: (recorder.click('.recommendation [data-evidence^="E-"]'), recorder.wait('.drawer[aria-hidden="false"]'), recorder.hold(5)), 12)
             recorder.scene("The report also records three concurrent agent intervals and their execution modes.",
                            lambda: (recorder.click('.drawer-close', scroll=False), recorder.scroll('.timeline'), recorder.hold(7)), 12)
+            recorder.scene("The fourth dimension separates foreign and domestic flows. These figures are synthetic market context.",
+                           lambda: (recorder.scroll('.flow-card'), recorder.hold(5)), 8)
             recorder.scene("Compare Growth using the same market snapshot and a different portfolio limit.",
                            lambda: recorder.click("#compare"), 12)
             recorder.wait(".recommendation")
@@ -369,11 +379,11 @@ def main():
             recorder.scene("Ask the filings about operating margin. The answer is an exact stored passage.",
                            lambda: (recorder.click("#ask-input"), recorder.type_text("operating margin"), recorder.click("#ask-form .primary", scroll=False), recorder.wait("#ask-result .evidence-item"), recorder.hold(4)), 15)
             recorder.scene("When no excerpt supports a question, CONTRA abstains instead of guessing.",
-                           lambda: (recorder.click("[data-question]"), recorder.hold(5)), 10)
+                           lambda: (recorder.click("#ask-input"), recorder.replace_text("weather forecast"), recorder.click("#ask-form .primary", scroll=False), recorder.hold(4)), 10)
             recorder.scene("Evaluation checks scenarios, citation integrity and measured execution.",
                            lambda: (recorder.click('[data-nav="/evaluation"]', scroll=False), recorder.wait('.metric-grid'), recorder.hold(7)), 12)
             recorder.scene("CONTRA is research software. It does not predict returns or execute trades.",
-                           lambda: (recorder.scroll('.section-row'), recorder.hold(6)), 9)
+                           lambda: (recorder.scroll('#degraded-checks'), recorder.hold(4)), 7)
             cdp.evaluate("document.querySelector('#demo-title').innerHTML='<div><small>EVIDENCE. CONTEXT. ACTION.</small><h1>CONTRA<span>.</span></h1><p>Explore the working product at contra-h0nw.onrender.com</p></div>';document.querySelector('#demo-title').classList.remove('hidden')")
             recorder.scene("Explore the working demo and inspect the public source code.", lambda: recorder.hold(5), 5)
             captions = list(recorder.captions)
@@ -390,7 +400,7 @@ def main():
             browser = None
         subtitles = OUTPUT / "CONTRA_hackathon_demo.srt"
         subtitles.write_text("\n\n".join(
-            f"{index}\n{srt_time(start)} --> {srt_time(end)}\n{textwrap.fill(text, width=47)}"
+            f"{index}\n{srt_time(start)} --> {srt_time(end)}\n{textwrap.fill(text, width=80)}"
             for index, (start, end, text) in enumerate(captions, 1)
         ) + "\n", encoding="utf-8")
         captioned = finalize_video(ffmpeg)

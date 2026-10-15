@@ -62,6 +62,8 @@ async function analysis(investor){const response=await authed(base+'/v1/analyses
  context.fetch=originalFetch;
  await vm.runInContext('evaluation()',context);
  assert(element('#view').innerHTML.includes('Scenario matrix'));
+ assert(element('#view').innerHTML.includes('Degraded-data checks'));
+ assert(element('#view').innerHTML.includes('changed flow evidence rejected'));
  const liveFetch=context.fetch;
  let releaseBenchmark;
  context.fetch=(path,options)=>path==='/v1/evaluations/benchmark'

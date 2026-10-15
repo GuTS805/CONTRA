@@ -2,6 +2,7 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
+from http.client import HTTPException
 import json
 from threading import Lock
 from time import monotonic
@@ -109,7 +110,7 @@ def history(db, as_of):
                            (record["id"], record["trade_date"], json.dumps(record)))
                 db.commit()
                 records.append(record)
-            except (OSError, ValueError, KeyError, TypeError) as exc:
+            except (OSError, HTTPException, ValueError, KeyError, TypeError) as exc:
                 warnings.append("NSE institutional flows could not be refreshed; eligible cached observations only. " + type(exc).__name__)
     eligible = [r for r in records if r["trade_date"] <= as_of]
     latest = max(eligible, key=lambda r: (r["trade_date"], r["observed_at"]), default=None)

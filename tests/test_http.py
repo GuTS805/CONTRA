@@ -80,6 +80,7 @@ class HttpTests(unittest.TestCase):
             "ticker": "ALPHA.NS", "investor_id": "demo_growth", "source_run_id": report["run_id"]}, opener=owner)
         self.assertEqual(compared["market_snapshot_hash"], report["market_snapshot_hash"])
         self.assertEqual(compared["signals"], report["signals"])
+        self.assertEqual(compared["sector_snapshot"], report["sector_snapshot"])
         stranger = self.session()
         with self.assertRaises(HTTPError) as caught:
             self.request_json("/v1/analyses", "POST", {
@@ -102,6 +103,8 @@ class HttpTests(unittest.TestCase):
                 self.assertEqual(json.load(caught.exception)["error"], code)
         status, health = self.request_json("/health")
         self.assertEqual((status, health["status"]), (200, "ok"))
+        self.assertEqual(health["method_version"], "rules-1.4")
+        self.assertEqual(health["signal_dimensions"], 4)
         with urlopen(self.base + "/", timeout=5) as response:
             self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
             self.assertIn("frame-ancestors 'none'", response.headers["Content-Security-Policy"])
