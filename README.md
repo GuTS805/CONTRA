@@ -6,7 +6,7 @@
 
 **Three independent agents. Four signal dimensions. One evidence-backed action sized to an investor's portfolio.**
 
-[Live app](https://contra-h0nw.onrender.com) · [60-second product walkthrough](#the-60-second-demo) · [Architecture](#how-it-works) · [Evaluation](#evaluation) · [Wild Bugs submission notes](docs/wild-bugs-submission.md)
+[Live app](https://contra-h0nw.onrender.com) · [Demo video](https://youtu.be/6yJYSpOQXoQ) · [60-second product walkthrough](#the-60-second-demo) · [Architecture](#how-it-works) · [Evaluation](#evaluation) · [Wild Bugs submission notes](docs/wild-bugs-submission.md)
 
 [![CI](https://github.com/GuTS805/CONTRA/actions/workflows/ci.yml/badge.svg)](https://github.com/GuTS805/CONTRA/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-252525?logo=python)
@@ -17,7 +17,7 @@
 
 ![CONTRA intelligence terminal showing the three-agent workspace and analysis controls](docs/assets/terminal.png)
 
-> **Try it:** Open the [live app](https://contra-h0nw.onrender.com), choose **Continue as guest**, then select **ALPHA.NS + Conservative**. Render's free instance may take about a minute to wake up.
+> **Try it:** Open the [live app](https://contra-h0nw.onrender.com), choose **Continue as guest**, then select **ALPHA.NS + Conservative**. If the free Render instance has been idle, the first load can take up to about 15 seconds.
 
 **What is real and what is synthetic**
 
@@ -34,12 +34,13 @@ CONTRA helps an investor inspect *why* market and filing signals disagree, then 
 ## The 60-second demo
 
 1. **Run ALPHA.NS for Conservative.** Momentum is positive, while the eligible filing evidence is negative. The report labels the result **Conflicted** and sizes a reduction from the profile's 15% holding to its 10% single-stock cap.
-2. **Open a cited reason.** The source drawer shows the exact frozen filing excerpt, date and source details behind it.
-3. **Compare all three investors.** The market snapshot and its hash stay fixed; holdings and limits change the personal action.
-4. **Ask the filings** about operating margin. Search returns the exact stored passage. An unsupported question returns no invented answer.
-5. **Open Evaluation.** Run scenario checks, degraded-input checks and the measured latency benchmark.
+2. **Read the disagreement investigation.** On this conflicted run a model agent chooses what to look up, code searches the frozen filings, and each finding carries an exact quote. The action is not changed by it.
+3. **Open a cited reason.** The source drawer shows the exact frozen filing excerpt, date and source details behind it.
+4. **Compare all three investors.** The market snapshot and its hash stay fixed; holdings and limits change the personal action.
+5. **Ask the filings** about operating margin. Search returns the exact stored passage. An unsupported question returns no invented answer.
+6. **Open Evaluation.** Run scenario checks, degraded-input checks and the measured latency benchmark.
 
-**Watch the [1:40 narrated demo](docs/assets/CONTRA_demo_narrated.mp4)** or download its [separate subtitle file](docs/assets/CONTRA_demo_narrated.srt). The walkthrough shows the actual click, three-investor comparison, cited evidence, filing search and Evaluation view. [`scripts/make_demo_video.py`](scripts/make_demo_video.py) reproduces it with a local browser, ffmpeg and an API key for narration; intermediate captures stay under git-ignored `data/demo/`.
+**Watch the [narrated demo on YouTube](https://youtu.be/6yJYSpOQXoQ)**, or use the [file in the repository](docs/assets/CONTRA_demo_narrated.mp4) with its [separate subtitle file](docs/assets/CONTRA_demo_narrated.srt). The walkthrough shows the actual click, three-investor comparison, cited evidence, filing search and Evaluation view. [`scripts/make_demo_video.py`](scripts/make_demo_video.py) reproduces it with a local browser, ffmpeg and an API key for narration; intermediate captures stay under git-ignored `data/demo/`.
 
 ## Why the recommendation changes
 
@@ -159,7 +160,7 @@ All `/v1` routes except authentication require a session cookie. Responses use J
 | Research data | `GET /v1/stocks`, `POST /v1/securities`, `POST /v1/documents`, `GET /v1/evidence/{id}` |
 | Profiles | `GET /v1/profiles`, `PUT /v1/profiles/{id}`, `GET /v1/profiles/{id}/portfolio` |
 | Reports | `POST /v1/analyses`, `GET /v1/analyses/{run_id}`, `GET /v1/analyses/{run_id}/ask?q=` |
-| Evaluation | `GET /v1/evaluations/summary`, `GET /v1/evaluations/benchmark` |
+| Evaluation | `GET /v1/evaluations/summary`, `GET /v1/evaluations/benchmark`, `GET /v1/evaluations/backtest` |
 
 | Path | Purpose |
 | --- | --- |
