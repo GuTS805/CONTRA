@@ -289,4 +289,39 @@ document.addEventListener('keydown',event=>{
   if(event.shiftKey?(document.activeElement===first||!drawer.contains(document.activeElement)):(document.activeElement===last||!drawer.contains(document.activeElement))){
     event.preventDefault();(event.shiftKey?last:first).focus();
   }
-});window.onpopstate=render;render();
+});
+function installMotion(){
+  if(typeof IntersectionObserver!=='function'||typeof MutationObserver!=='function')return;
+  const view=$('#view');
+  const preference=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  if(preference?.matches)return;
+  const observer=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting)return;
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    });
+  },{threshold:0.06,rootMargin:'0px 0px -16px 0px'});
+  const refresh=()=>{
+    observer.disconnect();
+    let index=0;
+    view.querySelectorAll('.hero,.card,.banner,.large-state,.section-row,.report-header,.evidence-item').forEach(element=>{
+      if(element.classList.contains('is-visible'))return;
+      if(!element.classList.contains('motion-ready')){
+        element.style.setProperty('--motion-delay',`${(index%4)*45}ms`);
+        element.classList.add('motion-ready');
+      }
+      observer.observe(element);
+      index++;
+    });
+  };
+  new MutationObserver(refresh).observe(view,{childList:true,subtree:true});
+  preference?.addEventListener?.('change',event=>{
+    if(event.matches){
+      observer.disconnect();
+      view.querySelectorAll('.motion-ready').forEach(element=>element.classList.add('is-visible'));
+    }else refresh();
+  });
+  refresh();
+}
+installMotion();window.onpopstate=render;render();
