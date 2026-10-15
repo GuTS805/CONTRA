@@ -308,7 +308,7 @@ function backtestPanel(b){
     <div class="notice" style="margin-top:14px">${verdict}</div>
     <table class="table" style="margin-top:14px"><tr><th>By year, hit rate</th>${years}</tr></table>
     <div class="tiny-note">${b.caveats.map(esc).join(' ')}</div>
-    <div class="tiny-note">Generated ${esc(b.generated_at)} by <code>python -m contra.backtest</code>; each symbol's close series is hashed in <code>docs/evaluation/backtest.json</code>.</div></div>`;
+    <div class="tiny-note">Generated ${esc(b.generated_at)} by <code>python -m contra.backtest</code>; each symbol's close series is hashed in <code>data/fixtures/backtest.json</code>.</div></div>`;
 }
 async function evaluation(token=renderToken){
   setNav('/evaluation');

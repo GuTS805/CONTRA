@@ -69,6 +69,8 @@ class BacktestTests(unittest.TestCase):
         self.assertEqual(backtest.majority_baseline(development, held_out)["guess"], "UP")
 
     def test_shipped_report_is_internally_consistent(self):
+        # The container image copies only data/fixtures, so the report must live there to reach the hosted app.
+        self.assertEqual(backtest.REPORT.parent.name, "fixtures")
         report = json.loads(backtest.REPORT.read_text(encoding="utf-8"))
         for key in ("all", "development", "held_out"):
             part = report[key]

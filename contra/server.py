@@ -26,7 +26,7 @@ from .store import RunIntegrityError, RevisionConflict, baseline_profiles
 WEB = Path(__file__).resolve().parent.parent / "web"
 WARM_CACHE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "model_cache.json"
 WARM_EMBEDDINGS = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "embedding_cache.json"
-BACKTEST_REPORT = Path(__file__).resolve().parent.parent / "docs" / "evaluation" / "backtest.json"
+BACKTEST_REPORT = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "backtest.json"
 LOOPBACK = {"127.0.0.1", "localhost"}
 MAX_SECURITIES = 20
 MAX_DOCUMENTS = 200

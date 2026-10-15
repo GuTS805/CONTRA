@@ -6,7 +6,7 @@ fetches about five years of daily NSE closes from Yahoo Finance, recomputes the 
 and volume signals at past dates with the same code the app uses (only bars up to that date), and
 compares each directional label with the next 21 sessions (about 30 calendar days). The settings below
 were fixed before the first run and were not tuned on the result. The report is written to
-docs/evaluation/backtest.json and shown in the Evaluation view.
+data/fixtures/backtest.json and shown in the Evaluation view.
 
 Only the price signals can be tested this way. Filing tone and institutional flows need point-in-time
 archives that CONTRA does not hold, so they are not backtested.
@@ -25,7 +25,7 @@ from urllib.parse import quote
 from . import live
 from .core import numeric_signals
 
-REPORT = Path(__file__).resolve().parent.parent / "docs" / "evaluation" / "backtest.json"
+REPORT = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "backtest.json"
 
 UNIVERSE = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "HINDUNILVR", "ITC", "SBIN", "BHARTIARTL",
             "KOTAKBANK", "LT", "AXISBANK", "ASIANPAINT", "MARUTI", "SUNPHARMA", "TITAN", "NTPC", "ULTRACEMCO",
