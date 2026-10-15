@@ -8,6 +8,7 @@ data/imports/
 data/*.stdin
 data/edge-check*/
 data/*check.png
+data/demo/
 /debug.log
 .env
 .env.*
