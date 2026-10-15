@@ -1,10 +1,11 @@
-"""Record a reproducible, captioned walkthrough of the local CONTRA app.
+"""Record a narrated, captioned walkthrough of the local CONTRA app.
 
-Requires Microsoft Edge or Chrome and ffmpeg. No browser automation package is used.
+Requires Microsoft Edge or Chrome, ffmpeg and an OPENAI_API_KEY for voice.
 The recorder starts an isolated local server with model calls disabled.
 """
 
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,13 +18,20 @@ import sys
 import tempfile
 import textwrap
 import time
+import urllib.error
 import urllib.request
+import wave
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "data" / "demo"
 WIDTH, HEIGHT, FPS = 1600, 820, 15
-random.seed(41)
+VOICE_MODEL = "gpt-4o-mini-tts"
+VOICE_NAME = "cedar"
+VOICE_STYLE = ("Warm, clear, natural English narration for a thoughtful product demo. "
+               "Sound like a real presenter explaining a product to judges, not an announcer. "
+               "Vary emphasis gently and leave a small pause at commas and sentence ends.")
+random.seed(73)
 
 
 def executable():
@@ -189,7 +197,7 @@ class Recorder:
         expression = f"(() => {{ const e=document.querySelector({json.dumps(selector)}); if(!e)return false; e.scrollIntoView({{behavior:'smooth',block:'center'}}); return true; }})()"
         if not self.cdp.evaluate(expression):
             raise RuntimeError("Cannot scroll to " + selector)
-        self.hold(1.15)
+        self.hold(random.uniform(.62, .88))
 
     def center(self, selector):
         expression = f"(() => {{ const e=document.querySelector({json.dumps(selector)}); if(!e)return null; const r=e.getBoundingClientRect(); return {{x:r.left+r.width/2,y:r.top+r.height/2}}; }})()"
@@ -200,13 +208,17 @@ class Recorder:
 
     def move(self, x, y, duration=1.0):
         x0, y0 = self.cursor
-        bend = random.uniform(-45, 45)
-        cx1, cy1 = x0 + (x - x0) * .3 + bend, y0 + (y - y0) * .17 - bend * .25
-        cx2, cy2 = x0 + (x - x0) * .72 - bend * .3, y0 + (y - y0) * .82 + bend
+        distance = ((x - x0) ** 2 + (y - y0) ** 2) ** .5
+        bend = random.uniform(-.13, .13) * min(distance, 430)
+        cx1, cy1 = x0 + (x - x0) * random.uniform(.18, .36) + bend, y0 + (y - y0) * .16 - bend * .35
+        cx2, cy2 = x0 + (x - x0) * random.uniform(.68, .86) - bend * .3, y0 + (y - y0) * .86 + bend
         count = max(5, round(duration * FPS))
+        ease = random.uniform(1.35, 2.45)
         for index in range(1, count + 1):
             fraction = index / count
-            t = fraction * fraction * (3 - 2 * fraction)
+            early = fraction ** ease
+            late = (1 - fraction) ** ease
+            t = early / (early + late) if early + late else fraction
             one = 1 - t
             px = one ** 3 * x0 + 3 * one ** 2 * t * cx1 + 3 * one * t ** 2 * cx2 + t ** 3 * x
             py = one ** 3 * y0 + 3 * one ** 2 * t * cy1 + 3 * one * t ** 2 * cy2 + t ** 3 * y
@@ -218,17 +230,22 @@ class Recorder:
         if scroll:
             self.scroll(selector)
         x, y = self.center(selector)
-        self.move(x, y, random.uniform(.75, 1.25))
-        self.hold(.35)
+        if random.random() < .3:
+            self.move(x + random.uniform(-13, 13), y + random.uniform(-9, 9), random.uniform(.34, .62))
+            self.hold(random.uniform(.07, .16))
+        self.move(x, y, random.uniform(.4, .87))
+        self.hold(random.uniform(.13, .33))
         self.cdp.command("Input.dispatchMouseEvent", {"type": "mousePressed", "x": x, "y": y, "button": "left", "clickCount": 1})
         self.frame()
         self.cdp.command("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": x, "y": y, "button": "left", "clickCount": 1})
-        self.hold(.5)
+        self.hold(random.uniform(.16, .37))
 
     def type_text(self, value):
         for letter in value:
             self.cdp.command("Input.insertText", {"text": letter})
             self.frame()
+            if letter in " ," and random.random() < .35:
+                self.frame()
 
     def replace_text(self, value):
         self.cdp.command("Input.dispatchKeyEvent", {"type": "keyDown", "key": "a", "code": "KeyA", "windowsVirtualKeyCode": 65, "modifiers": 2})
@@ -258,6 +275,63 @@ def srt_time(value):
     minutes, milliseconds = divmod(milliseconds, 60000)
     seconds, milliseconds = divmod(milliseconds, 1000)
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
+
+def voice_key():
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if key:
+        return key
+    env_file = ROOT / ".env"
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8-sig").splitlines():
+            if line.strip().startswith("OPENAI_API_KEY="):
+                return line.split("=", 1)[1].strip().strip("\"'")
+    raise RuntimeError("OPENAI_API_KEY is required for narration")
+
+
+def voice_clip(index, words):
+    payload = {"model": VOICE_MODEL, "voice": VOICE_NAME, "input": words,
+               "instructions": VOICE_STYLE, "response_format": "wav", "speed": 1.06}
+    identity = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:12]
+    output = OUTPUT / f"voice-{index:02d}-{identity}.wav"
+    if output.exists():
+        return output
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/audio/speech", data=json.dumps(payload).encode(),
+        headers={"Authorization": "Bearer " + voice_key(), "Content-Type": "application/json"})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=90) as response:
+                content = response.read()
+            if not content.startswith(b"RIFF"):
+                raise RuntimeError("Voice response was not a WAV file")
+            output.write_bytes(content)
+            return output
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 500, 502, 503) or attempt == 2:
+                raise RuntimeError(f"Voice API returned HTTP {exc.code}") from exc
+            time.sleep(2 ** attempt)
+    raise RuntimeError("Voice generation failed")
+
+
+def speech_duration(path):
+    with wave.open(str(path), "rb") as clip:
+        # Streaming speech WAVs can leave a placeholder frame count in the header.
+        actual_frames = len(clip.readframes(clip.getnframes())) / (clip.getnchannels() * clip.getsampwidth())
+        return actual_frames / clip.getframerate()
+
+
+def subtitle_scenes(path):
+    scenes = []
+    for block in re.split(r"\n\s*\n", path.read_text(encoding="utf-8").strip()):
+        lines = block.splitlines()
+        def seconds(value):
+            hours, minutes, rest = value.split(":")
+            sec, millis = rest.split(",")
+            return int(hours) * 3600 + int(minutes) * 60 + int(sec) + int(millis) / 1000
+        start, end = (seconds(value) for value in lines[1].split(" --> "))
+        scenes.append((start, end, " ".join(lines[2:])))
+    return scenes
 
 
 def finalize_video(ffmpeg):
@@ -291,11 +365,29 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ass.write_text(header + "\n".join(events) + "\n", encoding="utf-8")
     source = OUTPUT / "CONTRA_hackathon_demo_source.mp4"
     captioned = OUTPUT / "CONTRA_hackathon_demo.mp4"
+    scenes = subtitle_scenes(subtitles)
+    clips = [voice_clip(index, words) for index, (_, _, words) in enumerate(scenes, 1)]
+    audio_filters = []
+    for index, ((start, end, _), clip) in enumerate(zip(scenes, clips), 1):
+        duration = speech_duration(clip)
+        room = end - start - .42
+        tempo = max(1.0, duration / room)
+        if tempo > 1.22:
+            raise RuntimeError(f"Narration scene {index} needs {duration:.1f}s but has only {room:.1f}s")
+        delay = round((start + .18) * 1000)
+        audio_filters.append(f"[{index}:a]atempo={tempo:.4f},adelay={delay}:all=1[a{index}]")
+        print(f"Voice {index:02d}: {duration:.1f}s in a {end-start:.1f}s scene", flush=True)
+    labels = "".join(f"[a{index}]" for index in range(1, len(clips) + 1))
+    audio_filters.append(f"{labels}amix=inputs={len(clips)}:duration=longest:normalize=0,"
+                         f"atrim=0:{scenes[-1][1]:.3f},loudnorm=I=-17:TP=-1.5:LRA=10[a]")
     subprocess.run([
         ffmpeg, "-y", "-loglevel", "error", "-i", source.name,
+        *(part for clip in clips for part in ("-i", clip.name)),
+        "-filter_complex", ";".join(audio_filters), "-map", "0:v", "-map", "[a]",
         "-vf", "pad=1600:900:0:0:color=0x111111,ass=CONTRA_hackathon_demo.ass",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-        "-pix_fmt", "yuv420p", "-movflags", "+faststart", captioned.name,
+        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
+        "-movflags", "+faststart", captioned.name,
     ], cwd=OUTPUT, check=True)
     return captioned
 
@@ -349,41 +441,40 @@ def main():
               const title=document.createElement('div');title.id='demo-title';title.innerHTML='<div><small>THE WORKING PRODUCT DEMO</small><h1>CONTRA<span>.</span></h1><p>When market signals and company filings disagree, what should one investor actually do?</p></div>';document.body.appendChild(title);
             })()""")
             recorder = Recorder(cdp, ffmpeg)
-            recorder.scene("What happens when market signals and company filings disagree?", lambda: recorder.hold(5), 5)
+            recorder.scene("What happens when market signals and company filings disagree?", lambda: recorder.hold(5.5), 5.5)
             cdp.evaluate("document.querySelector('#demo-title').classList.add('hidden')")
             recorder.scene("CONTRA puts independent evidence and investor limits in one explainable view.",
-                           lambda: recorder.click("#guest", scroll=False), 9)
+                           lambda: recorder.click("#guest", scroll=False), 7.5)
             recorder.wait(".terminal-hero")
             recorder.scene("Three agents inspect a frozen snapshot. Every conclusion links back to its source.",
-                           lambda: recorder.hold(7), 7)
+                           lambda: recorder.hold(6.5), 6.5)
             recorder.scene("Choose ALPHA.NS, a clearly labeled synthetic scenario with known outcomes.",
-                           lambda: recorder.click('[data-scenario="ALPHA.NS"]'), 12)
+                           lambda: recorder.click('[data-scenario="ALPHA.NS"]'), 9.5)
             recorder.scene("The Conservative profile has a 10 percent single asset cap. Now run the analysis.",
-                           lambda: (recorder.scroll("#investor"), recorder.hold(2), recorder.click("#run", scroll=False)), 12)
+                           lambda: (recorder.scroll("#investor"), recorder.hold(.8), recorder.click("#run", scroll=False)), 10)
             recorder.wait(".recommendation")
             recorder.scene("Price momentum is positive. Filing evidence is negative. The result is conflicted.",
-                           lambda: (recorder.scroll(".large-state"), recorder.hold(7)), 10)
+                           lambda: (recorder.scroll(".large-state"), recorder.hold(5.5)), 8)
             recorder.scene("CONTRA sizes the action from this investor's holdings and risk cap.",
-                           lambda: (recorder.scroll(".recommendation"), recorder.hold(9)), 12)
+                           lambda: (recorder.scroll(".recommendation"), recorder.hold(6)), 8.5)
             recorder.scene("Click a cited reason to inspect the exact frozen filing excerpt and its date.",
-                           lambda: (recorder.click('.recommendation [data-evidence^="E-"]'), recorder.wait('.drawer[aria-hidden="false"]'), recorder.hold(5)), 12)
+                           lambda: (recorder.click('.recommendation [data-evidence^="E-"]'), recorder.wait('.drawer[aria-hidden="false"]'), recorder.hold(3.5)), 9)
             recorder.scene("The report also records three concurrent agent intervals and their execution modes.",
-                           lambda: (recorder.click('.drawer-close', scroll=False), recorder.scroll('.timeline'), recorder.hold(7)), 12)
+                           lambda: (recorder.click('.drawer-close', scroll=False), recorder.scroll('.timeline'), recorder.hold(4.5)), 9)
             recorder.scene("The fourth dimension separates foreign and domestic flows. These figures are synthetic market context.",
-                           lambda: (recorder.scroll('.flow-card'), recorder.hold(5)), 8)
-            recorder.scene("Compare Growth using the same market snapshot and a different portfolio limit.",
-                           lambda: recorder.click("#compare"), 12)
-            recorder.wait(".recommendation")
-            recorder.scene("The evidence stays fixed. The 30 percent cap changes the personal action.",
-                           lambda: (recorder.scroll(".recommendation"), recorder.hold(8)), 12)
+                           lambda: (recorder.scroll('.flow-card'), recorder.hold(4)), 7)
+            recorder.scene("Now compare all three investors using the exact same market snapshot.",
+                           lambda: (recorder.click("#all-investors"), recorder.wait(".investors-table"), recorder.scroll(".investors-table")), 10)
+            recorder.scene("Conservative trims, Growth holds, and Starter stays out. The evidence is unchanged.",
+                           lambda: recorder.hold(7), 9)
             recorder.scene("Ask the filings about operating margin. The answer is an exact stored passage.",
-                           lambda: (recorder.click("#ask-input"), recorder.type_text("operating margin"), recorder.click("#ask-form .primary", scroll=False), recorder.wait("#ask-result .evidence-item"), recorder.hold(4)), 15)
+                           lambda: (recorder.click("#ask-input"), recorder.type_text("operating margin"), recorder.click("#ask-form .primary", scroll=False), recorder.wait("#ask-result .evidence-item"), recorder.hold(3)), 12.5)
             recorder.scene("When no excerpt supports a question, CONTRA abstains instead of guessing.",
-                           lambda: (recorder.click("#ask-input"), recorder.replace_text("weather forecast"), recorder.click("#ask-form .primary", scroll=False), recorder.hold(4)), 10)
+                           lambda: (recorder.click("#ask-input"), recorder.replace_text("weather forecast"), recorder.click("#ask-form .primary", scroll=False), recorder.hold(2.5)), 10)
             recorder.scene("Evaluation checks scenarios, citation integrity and measured execution.",
-                           lambda: (recorder.click('[data-nav="/evaluation"]', scroll=False), recorder.wait('.metric-grid'), recorder.hold(7)), 12)
+                           lambda: (recorder.click('[data-nav="/evaluation"]', scroll=False), recorder.wait('.metric-grid'), recorder.hold(5)), 9.5)
             recorder.scene("CONTRA is research software. It does not predict returns or execute trades.",
-                           lambda: (recorder.scroll('#degraded-checks'), recorder.hold(4)), 7)
+                           lambda: (recorder.scroll('#degraded-checks'), recorder.hold(3.5)), 6)
             cdp.evaluate("document.querySelector('#demo-title').innerHTML='<div><small>EVIDENCE. CONTEXT. ACTION.</small><h1>CONTRA<span>.</span></h1><p>Explore the working product at contra-h0nw.onrender.com</p></div>';document.querySelector('#demo-title').classList.remove('hidden')")
             recorder.scene("Explore the working demo and inspect the public source code.", lambda: recorder.hold(5), 5)
             captions = list(recorder.captions)

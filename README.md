@@ -39,7 +39,7 @@ CONTRA helps an investor inspect *why* market and filing signals disagree, then 
 4. **Ask the filings** about operating margin. Search returns the exact stored passage. An unsupported question returns no invented answer.
 5. **Open Evaluation.** Run scenario checks, degraded-input checks and the measured latency benchmark.
 
-The browser walkthrough can also be recorded with captions using [`scripts/make_demo_video.py`](scripts/make_demo_video.py). The generated MP4 and SRT stay under the git-ignored `data/demo/` directory.
+**Watch the [2:24 narrated demo](docs/assets/CONTRA_demo_narrated.mp4)** or download its [separate subtitle file](docs/assets/CONTRA_demo_narrated.srt). The walkthrough shows the actual click, three-investor comparison, cited evidence, filing search and Evaluation view. [`scripts/make_demo_video.py`](scripts/make_demo_video.py) reproduces it with a local browser, ffmpeg and an API key for narration; intermediate captures stay under git-ignored `data/demo/`.
 
 ## Why the recommendation changes
 

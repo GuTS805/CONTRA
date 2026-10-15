@@ -1,0 +1,73 @@
+1
+00:00:00,000 --> 00:00:05,533
+What happens when market signals and company filings disagree?
+
+2
+00:00:05,533 --> 00:00:13,067
+CONTRA puts independent evidence and investor limits in one explainable view.
+
+3
+00:00:13,600 --> 00:00:20,133
+Three agents inspect a frozen snapshot. Every conclusion links back to its
+source.
+
+4
+00:00:20,133 --> 00:00:29,667
+Choose ALPHA.NS, a clearly labeled synthetic scenario with known outcomes.
+
+5
+00:00:29,667 --> 00:00:39,667
+The Conservative profile has a 10 percent single asset cap. Now run the
+analysis.
+
+6
+00:00:40,200 --> 00:00:48,200
+Price momentum is positive. Filing evidence is negative. The result is
+conflicted.
+
+7
+00:00:48,200 --> 00:00:56,733
+CONTRA sizes the action from this investor's holdings and risk cap.
+
+8
+00:00:56,733 --> 00:01:05,733
+Click a cited reason to inspect the exact frozen filing excerpt and its date.
+
+9
+00:01:05,733 --> 00:01:14,733
+The report also records three concurrent agent intervals and their execution
+modes.
+
+10
+00:01:14,733 --> 00:01:21,733
+The fourth dimension separates foreign and domestic flows. These figures are
+synthetic market context.
+
+11
+00:01:21,733 --> 00:01:31,733
+Now compare all three investors using the exact same market snapshot.
+
+12
+00:01:31,733 --> 00:01:40,733
+Conservative trims, Growth holds, and Starter stays out. The evidence is
+unchanged.
+
+13
+00:01:40,733 --> 00:01:53,200
+Ask the filings about operating margin. The answer is an exact stored passage.
+
+14
+00:01:53,200 --> 00:02:03,200
+When no excerpt supports a question, CONTRA abstains instead of guessing.
+
+15
+00:02:03,200 --> 00:02:12,667
+Evaluation checks scenarios, citation integrity and measured execution.
+
+16
+00:02:12,667 --> 00:02:18,667
+CONTRA is research software. It does not predict returns or execute trades.
+
+17
+00:02:18,667 --> 00:02:23,667
+Explore the working demo and inspect the public source code.
