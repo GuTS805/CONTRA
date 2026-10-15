@@ -1,6 +1,6 @@
 # Five-minute local demo
 
-Start the server with `python -m contra.server`, open `http://localhost:8000` and click **Continue as guest**. The script below uses the synthetic scenarios, whose outcomes are known. To finish with real data, add `RELIANCE.NS` on the terminal, paste a recent filing excerpt in Evidence library, and run it.
+Start the server with `python -m contra.server`, open `http://localhost:8000` and click **Continue as guest**. The script below uses the synthetic scenarios, whose outcomes are known. To finish with real data, click **Load Infosys** on the terminal and run INFY.NS. Open a cited excerpt and follow its SEC EDGAR link, then ask "Do they have any debt?" to get the Form 20-F liquidity passage.
 
 | Time | Action | What it proves |
 | --- | --- | --- |
@@ -16,4 +16,4 @@ Start the server with `python -m contra.server`, open `http://localhost:8000` an
 
 The profile editor can change single-name and sector caps. These changes create a new profile revision; existing reports retain the profile snapshot used when they ran.
 
-Demo boundaries: all quantities and filings are simulated. Actions come from a fixed, published policy over cited evidence and the saved profile limits. They are research suggestions, not financial advice or trade execution. No future-return accuracy is claimed.
+Demo boundaries: in the scripted scenarios, all quantities and filings are simulated. Actions come from a fixed, published policy over cited evidence and the saved profile limits. They are research suggestions, not financial advice or trade execution. No future-return accuracy is claimed.

@@ -22,6 +22,7 @@ The supplied blueprint is the target specification. This table records what the 
 | T17 — Live symbol analysis | Yahoo chart parsing drops forming, null and zero-volume bars; a LIVE analysis with an uploaded filing runs from a seeded cache; provider failure falls back to cache with a warning. | Local pass (parser on recorded payloads; RELIANCE.NS and TCS.NS fetched manually in a browser session) |
 | T18 — Grounded model briefings | Code verifies each model-written Market/Research briefing: allowed citations only, no digits, no advice or judgment words, no contradiction; failures fall back to labeled rule summaries. In a real gpt-4.1-nano warm-up, 14 of 14 briefings passed after these rules, and each was reviewed by hand. | Local pass |
 | T19 — Semantic filing search | Hybrid embeddings + TF-IDF on held-out paraphrases: Recall@3 100% versus 86% for keywords only; 4 of 4 unrelated questions abstain. | Local pass (synthetic corpus) |
+| T20 — Real filings | 8 Infosys excerpts from SEC EDGAR: `python -m contra.public_filings` confirms all 8 match their filings exactly. Research claims must match an exact quote's topic, direction, quality words and negation; the real "guidance revised upward" error is a regression test. | Local pass |
 | T12 — Production inspection | Hosted-mode test checks public Host, Origin, Secure/HttpOnly cookie and HSTS. Dockerfile and Render Blueprint are included. The container was not built here (Docker unavailable) and no deployment has been made. | Deploy-ready; not deployed |
 
 ## Remaining blueprint work

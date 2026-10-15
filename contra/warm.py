@@ -8,7 +8,7 @@ to data/fixtures/model_cache.json, which the server preloads. A hosted copy can 
 show model reasoning for the scenarios without spending credits again. Reports label every
 reused answer as cached, with the time it was first answered.
 
-It also embeds the synthetic filings, the suggested questions and the held-out evaluation
+It also embeds the synthetic filings, the real-company SEC excerpts, the suggested questions and the held-out evaluation
 questions into data/fixtures/embedding_cache.json, so filing search and its evaluation
 work without new embedding calls.
 """
@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-from . import embeddings, llm, store
+from . import embeddings, llm, public_filings, store
 from .core import analyze
 from .evaluation import paraphrase_texts
 from .fixtures import STOCKS, documents
@@ -63,7 +63,8 @@ def main() -> None:
     for item in rejected:
         print("Summary rejected:", item)
 
-    texts = list(dict.fromkeys([doc["excerpt"] for doc in documents()] + SUGGESTED_QUESTIONS + paraphrase_texts()))
+    texts = list(dict.fromkeys([doc["excerpt"] for doc in documents() + public_filings.documents()]
+                              + SUGGESTED_QUESTIONS + paraphrase_texts()))
     embed_before = embeddings.usage()["calls"]
     embeddings.embed(texts)
     vectors = {embeddings.key_for(text): vector for text, vector in zip(texts, embeddings.cached_only(texts))}

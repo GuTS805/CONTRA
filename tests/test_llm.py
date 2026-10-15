@@ -171,8 +171,13 @@ class ModelAdapterTests(unittest.TestCase):
             focus = next(iter(llm.allowed_focus(facts["agent"], {**facts, "evidence_ids": facts["eligible_evidence_ids"]})))
             ids = facts["eligible_evidence_ids"][:1]
             choice = {"focus": focus, "supporting_ids": ids}
-            if facts["agent"] != "RISK":
-                choice["summary"] = f"This view rests on [{ids[0]}]." if ids else "No source was eligible for this view."
+            if facts["agent"] == "RESEARCH":
+                excerpt = facts["facts"][0]
+                choice["summary"] = [{"sentence": "This view rests on the cited excerpt.",
+                                      "source_id": excerpt["source_ids"][0],
+                                      "quote": " ".join(excerpt["value"].split()[:5])}]
+            elif facts["agent"] == "MARKET":
+                choice["summary"] = f"This view rests on [{ids[0]}]."
             return FakeResponse({"model": "fixture-model", "output": [{"type": "message", "content": [
                 {"type": "output_text", "text": json.dumps(choice)}]}]})
         with tempfile.TemporaryDirectory() as folder:

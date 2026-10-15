@@ -1,0 +1,74 @@
+{
+ "company": "Infosys Limited",
+ "ticker": "INFY.NS",
+ "sector": "Technology",
+ "sec_cik": "0001067491",
+ "retrieved_at": "2026-10-15",
+ "note": "Each excerpt is a contiguous span of the cited SEC document, copied exactly; only whitespace is collapsed. Run python -m contra.public_filings to re-check every excerpt against SEC EDGAR.",
+ "excerpts": [
+  {
+   "id": "E-INFY-P01",
+   "title": "Q1 FY27 revenue, margin and deal wins",
+   "published_at": "2026-07-23",
+   "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
+   "excerpt": "Infosys (NSE, BSE, NYSE: INFY), a global leader in AI-first business consulting and technology services, delivered $5,082 million in Q1 revenues, year on year growth of 2.4% and sequential growth of 1.0% in constant currency. Operating margin was at 21.1%, sequential increase of 0.2%. EPS growth was 14.9% year on year in rupee terms. TCV of large deal wins was $3.6 billion, with 61% net new."
+  },
+  {
+   "id": "E-INFY-P02",
+   "title": "FY27 revenue guidance revised",
+   "published_at": "2026-07-23",
+   "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
+   "excerpt": "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%"
+  },
+  {
+   "id": "E-INFY-P03",
+   "title": "CFO on margins and cash generation",
+   "published_at": "2026-07-23",
+   "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
+   "excerpt": "Our resilient margins of 21.1% and consistent strong cash generation reflect the strength of our business model, disciplined execution and continued focus on operational excellence in a challenging business environment"
+  },
+  {
+   "id": "E-INFY-P04",
+   "title": "Mercedes-Benz engagement renewed",
+   "published_at": "2026-07-23",
+   "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
+   "excerpt": "Infosys renewed its long-standing collaboration with Mercedes-Benz Group AG, moving one of the automotive sector’s largest hybrid cloud and data center operations to an AI-led operating model. As part of the extended engagement, Infosys will embed AIOps and agentic AI across the IT landscape, powered by Infosys Topaz and Infosys Cobalt, to further enhance reliability, efficiency and innovation."
+  },
+  {
+   "id": "E-INFY-P05",
+   "title": "Q4 FY26 revenue and operating margin",
+   "published_at": "2026-04-23",
+   "form": "Form 6-K, Exhibit 99.2: Q4 and FY26 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000014/exv99w02.htm",
+   "excerpt": "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency. Q4 operating margin was at 20.9%."
+  },
+  {
+   "id": "E-INFY-P06",
+   "title": "FY27 guidance as first issued",
+   "published_at": "2026-04-23",
+   "form": "Form 6-K, Exhibit 99.2: Q4 and FY26 press release (IFRS, USD)",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000014/exv99w02.htm",
+   "excerpt": "Revenue growth of 1.5%-3.5% in constant currency"
+  },
+  {
+   "id": "E-INFY-P07",
+   "title": "Liquidity and borrowings",
+   "published_at": "2026-06-15",
+   "form": "Form 20-F for the year ended March 31, 2026",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000119312526270520/infy-20260331.htm",
+   "excerpt": "Our principal sources of liquidity are cash and cash equivalents, investments, and the cash flow that we generate from operations. We have no outstanding borrowings. We believe that our working capital is sufficient to meet our current requirements."
+  },
+  {
+   "id": "E-INFY-P08",
+   "title": "Demand risk to revenue and liquidity",
+   "published_at": "2026-06-15",
+   "form": "Form 20-F for the year ended March 31, 2026",
+   "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000119312526270520/infy-20260331.htm",
+   "excerpt": "We believe that a sustained reduction in IT spending by clients, a longer sales cycle, or a continued economic downturn in any of the various geographic locations or business segments in which we operate, could result in a decline in our revenues and negatively impact our liquidity and cash resources."
+  }
+ ]
+}

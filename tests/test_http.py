@@ -335,5 +335,46 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 400)
 
 
+    def test_public_filings_example(self):
+        user = self.session()
+        _, me = self.request_json("/v1/auth/me", opener=user)
+        today = date.today()
+        bars, day = [], today - timedelta(days=60)
+        while day < today:
+            if day.weekday() < 5:
+                bars.append({"id": f"BAR-INFY.NS-{day}", "ticker": "INFY.NS", "trade_date": day.isoformat(),
+                             "close": float(1500 - len(bars)), "volume": 5000 + len(bars), "mode": "LIVE",
+                             "origin": "yahoo_finance_chart", "source_uri": "https://query1.finance.yahoo.com/x",
+                             "timezone": "Asia/Kolkata", "adjusted": False})
+            day += timedelta(days=1)
+        # Seed the symbol so the test never calls Yahoo Finance.
+        with closing(sqlite3.connect(self.db_path())) as db, db:
+            db.execute("INSERT OR REPLACE INTO market_bars(ticker,payload,fetched_at) VALUES (?,?,?)",
+                       ("INFY.NS", json.dumps(bars), datetime.now(timezone.utc).isoformat()))
+            db.execute("INSERT INTO user_securities(owner_id,ticker,name,sector,added_at) VALUES (?,?,?,?,?)",
+                       (me["id"], "INFY.NS", "Infosys Limited", "Technology", "2026-01-01"))
+        status, loaded = self.request_json("/v1/examples/public-filings", "POST", {}, opener=user)
+        self.assertEqual((status, loaded["ticker"], loaded["added_documents"], loaded["document_count"]),
+                         (201, "INFY.NS", 8, 8))
+        _, again = self.request_json("/v1/examples/public-filings", "POST", {}, opener=user)
+        self.assertEqual((again["added_documents"], again["document_count"]), (0, 8), "loading twice adds nothing")
+        _, library = self.request_json("/v1/evidence", opener=user)
+        sec = [doc for doc in library["documents"] if doc["ticker"] == "INFY.NS"]
+        self.assertEqual({doc["mode"] for doc in sec}, {"PUBLIC_FILING"})
+        self.assertTrue(all(doc["source_uri"].startswith("https://www.sec.gov/Archives/edgar/data/1067491/")
+                            for doc in sec))
+        _, report = self.request_json("/v1/analyses", "POST", {"ticker": "INFY.NS", "investor_id": "demo_growth"},
+                                      opener=user)
+        self.assertEqual(report["data_mode"], "LIVE")
+        self.assertTrue(report["evidence"])
+        self.assertTrue(all(item["id"].startswith("E-INFY-P") for item in report["evidence"]))
+        _, answer = self.request_json(f"/v1/analyses/{report['run_id']}/ask?q=outstanding%20borrowings", opener=user)
+        self.assertEqual(answer["passages"][0]["id"], "E-INFY-P07")
+        _, cited = self.request_json(f"/v1/analyses/{report['run_id']}/evidence/E-INFY-P07", opener=user)
+        self.assertEqual(cited["form"], "Form 20-F for the year ended March 31, 2026")
+        _, other = self.request_json("/v1/evidence", opener=self.session())
+        self.assertFalse([doc for doc in other["documents"] if doc["ticker"] == "INFY.NS"],
+                         "one account's example stays out of another's library")
+
 if __name__ == "__main__":
     unittest.main()

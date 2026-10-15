@@ -122,3 +122,10 @@ Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at
 ### Cycle 15: concurrency fix
 - Three agent threads opening a fresh database at once could run the schema migration concurrently (`OperationalError`). First-time migration is now locked.
 - **Verification:** 59 Python tests and the UI smoke test pass. The report, evaluation and mobile views were inspected in a browser.
+
+### Cycle 16: real-company filings and quote-grounded research briefings
+- Added a one-click Infosys example: live NSE prices plus 8 exact excerpts from its SEC filings (Q4 FY26 and Q1 FY27 results releases, 2026 Form 20-F). Each excerpt keeps its form, filing date and EDGAR URL. `python -m contra.public_filings` re-checks every excerpt against EDGAR; all 8 matched.
+- On the first real run, a verified Research briefing said Infosys's revenue guidance was "revised upward". The filing narrowed the range from 1.5%-3.5% to 1.5%-3.0%. Word-level checks could not catch a direction borrowed from another excerpt.
+- Research briefings are now claims: each sentence with one source ID and an exact quote from it. Code rejects the claim when the quote is not exact text, or when the sentence names a topic, direction, quality word or negation that the quote does not contain. The original error is a regression test.
+- A real Market briefing read above-typical volume as "a decline in market activity". Market briefings may no longer interpret the measurements, and may not describe price direction against the measured sign.
+- Re-warm with gpt-4.1-nano (briefing-2.1): 15 paid calls, 10 of 14 briefings verified, 4 replaced by labeled rule summaries. Reasons: a sentence naming revenue that its quote lacked, and "suggest a bullish market condition".

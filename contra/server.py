@@ -14,7 +14,7 @@ import sys
 import traceback
 from urllib.parse import urlparse, unquote, parse_qs
 
-from . import auth, embeddings, live, llm
+from . import auth, embeddings, live, llm, public_filings
 from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
@@ -347,7 +347,33 @@ class Handler(BaseHTTPRequestHandler):
                 document = live.make_document(ticker, body)
                 store.save_document(db, owner, document)
                 return self._send(201, document)
+            if path == "/v1/examples/public-filings":
+                return self._load_public_example(db, owner)
         return self._error(404, "NOT_FOUND", "Unknown route")
+
+    def _load_public_example(self, db, owner):
+        """Add the real-company example: live prices plus exact SEC filing excerpts. Safe to repeat."""
+        spec = public_filings.example()
+        ticker = spec["ticker"]
+        known = {item["ticker"] for item in store.securities(db, owner)}
+        if ticker not in known:
+            if len(known) >= MAX_SECURITIES:
+                raise ValueError(f"You can track up to {MAX_SECURITIES} live symbols")
+            if self._limited("security:" + owner, 30, 3600):
+                return
+            name, bars = live.fetch(ticker)
+            store.cache_bars(db, ticker, bars)
+            store.add_security(db, owner, ticker, name, spec["sector"])
+        saved = {doc["id"] for doc in store.user_documents(db, owner)}
+        missing = [doc for doc in public_filings.documents() if doc["id"] not in saved]
+        if len(saved) + len(missing) > MAX_DOCUMENTS:
+            raise ValueError(f"You can store up to {MAX_DOCUMENTS} filing excerpts")
+        for doc in missing:
+            store.save_document(db, owner, doc)
+        bars, _ = store.cached_bars(db, ticker)
+        return self._send(201, {"ticker": ticker, "company": spec["company"], "added_documents": len(missing),
+                                "document_count": len(store.user_documents(db, owner, ticker)),
+                                "last_date": bars[-1]["trade_date"] if bars else None})
 
     def _auth(self, path):
         ip = self._client_ip()

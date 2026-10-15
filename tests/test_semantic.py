@@ -52,6 +52,10 @@ class SummaryVerificationTests(unittest.TestCase):
             ("The trend looks bearish over recent sessions [BAR-A-2].", "MARKET", MARKET, "contradicts"),
             ("Prices declined across recent sessions [BAR-A-2].", "MARKET", MARKET, "contradicts"),
             ("Volume stays within acceptable bounds [BAR-A-2].", "MARKET", MARKET, "judgment"),
+            # A real gpt-4.1-nano summary read above-typical volume as "a decline in market activity".
+            ("Volume is above typical levels, suggesting heavier market activity [BAR-A-2].", "MARKET", MARKET,
+             "speculates"),
+            ("Momentum is positive, pointing to a bullish outlook [BAR-A-1].", "MARKET", MARKET, "speculates"),
             ("Volume is high and no breach of volume limits appears [BAR-A-2].", "MARKET", MARKET, "portfolio limits"),
             ("The filing looks bullish on balance [E-X-01].", "RESEARCH", RESEARCH, "contradicts"),
             ("Short.", "MARKET", MARKET, "length"),
@@ -75,35 +79,90 @@ class SummaryVerificationTests(unittest.TestCase):
         self.assertNotIn("summary", sent["text"]["format"]["schema"]["properties"])
         self.assertEqual(answer["summary"], {"text": None, "status": "NOT_REQUESTED"})
 
-    def test_rejected_summary_keeps_focus_and_uses_rule_briefing(self):
-        llm.reset_state()
-        self.addCleanup(llm.reset_state)
-        result = {"status": "OK", "assessment": "BEARISH", "facts": [
-            {"key": "filing_excerpt", "value": "Operating margin narrowed.", "source_ids": ["E-01"]}], "evidence_ids": ["E-01"]}
-        payload = {"model": "fixture-model", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(
-            {"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"], "summary": "Margins fell 40% [E-01]."})}]}]}
-        with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_MODEL": "fixture-model"}), \
-                patch("contra.llm.urlopen", return_value=FakeResponse(payload)):
-            answer = llm.reason("RESEARCH", result)
-        self.assertEqual(answer["focus"], "NEGATIVE_FACTS")
-        self.assertEqual(answer["summary"], {"text": None, "status": "REJECTED", "reason": "states a number",
-                                             "rejected_text": "Margins fell 40% [E-01]."})
+    def test_research_claims_must_match_their_own_quotes(self):
+        guidance = "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%"
+        quarter = "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency."
+        cash = "We have no outstanding borrowings. We believe that our working capital is sufficient."
+        mercedes = "moving one of the automotive sector\u2019s largest hybrid cloud operations"
+        excerpts = {"E-G": guidance, "E-Q": quarter, "E-C": cash, "E-M": mercedes}
 
-    def test_supporting_ids_become_citations_when_text_has_none(self):
+        def claim(sentence, source, quote):
+            return {"sentence": sentence, "source_id": source, "quote": quote}
+        passing = (
+            [claim("Revenue guidance for the year was revised.", "E-G", "Revenue Guidance Revised to")],
+            [claim("Quarterly revenues showed year on year growth.", "E-Q", "Q4 revenues were $5,040 million, growth")],
+            [claim("The company has no outstanding borrowings.", "E-C", "We have no outstanding borrowings.")],
+            [claim("Revenue guidance was revised and margin guidance retained.", "E-G",
+                   "Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%.")],
+            [claim("It runs one of the automotive sector's largest cloud operations.", "E-M",
+                   "one of the automotive sector's largest")],
+        )
+        for claims in passing:
+            with self.subTest(claims=claims[0]["sentence"]):
+                self.assertIsNone(llm.verify_claims(claims, excerpts))
+        failing = (
+            # A real gpt-4.1-nano summary of Infosys filings: the guidance range was narrowed, not raised.
+            ([claim("Revenue guidance was revised upward.", "E-G", "Revenue Guidance Revised to")], "states an increase"),
+            ([claim("Revenue guidance was raised.", "E-Q", "Q4 revenues were $5,040 million, growth")], "names guidance"),
+            ([claim("Revenues grew strongly.", "E-Q", "Q4 revenues were $5,040 million, growth")], "calls something strong"),
+            ([claim("The company has outstanding borrowings.", "E-C", "We have no outstanding borrowings.")], "negation"),
+            ([claim("Revenue guidance was revised.", "E-G", "Revenue Guidance Revised upward to")], "not exact text"),
+            ([claim("Guidance was revised.", "E-G", "Guidance Revised")], "not exact text"),
+            ([claim("Revenue guidance was revised.", "E-X", "Revenue Guidance Revised to")], "outside the eligible set"),
+            ([claim("Revenue guidance was revised. It was lowered.", "E-G", "Revenue Guidance Revised to")], "one sentence"),
+            ([claim("Revenue guidance was revised.", "E-G", "Revenue Guidance Revised to")] * 4, "one to three"),
+            (["Revenue guidance was revised."], "malformed"),
+        )
+        for claims, reason in failing:
+            with self.subTest(reason=reason):
+                self.assertIn(reason, llm.verify_claims(claims, excerpts) or "PASSED")
+
+    def test_market_summary_must_match_the_sign_of_the_price_change(self):
+        falling = {**MARKET, "assessment": "NEUTRAL",
+                   "facts": [{**MARKET["facts"][0], "value": -0.012}, MARKET["facts"][1]]}
+        self.assertIn("sign", llm.verify_summary("Prices drifted upward over recent sessions [BAR-A-1].", "MARKET", falling))
+        self.assertIn("sign", llm.verify_summary("There was some upward price movement [BAR-A-1].", "MARKET", falling))
+        self.assertIsNone(llm.verify_summary("Prices did not move upward over recent sessions [BAR-A-1].", "MARKET", falling))
+        self.assertIsNone(llm.verify_summary("Prices drifted slightly lower over recent sessions [BAR-A-1].", "MARKET", falling))
+
+    def test_rejected_claims_keep_focus_and_use_rule_briefing(self):
         llm.reset_state()
         self.addCleanup(llm.reset_state)
         result = {"status": "OK", "assessment": "BEARISH", "facts": [
-            {"key": "filing_excerpt", "value": "Operating margin narrowed.", "source_ids": ["E-01"]},
-            {"key": "filing_excerpt", "value": "A customer renewed its contract.", "source_ids": ["E-02"]}],
-            "evidence_ids": ["E-01", "E-02"]}
+            {"key": "filing_excerpt", "value": "Operating margin narrowed as component costs rose.", "source_ids": ["E-01"]}],
+            "evidence_ids": ["E-01"]}
+        claims = [{"sentence": "Margins fell sharply.", "source_id": "E-01", "quote": "Operating margin narrowed as component"}]
         payload = {"model": "fixture-model", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(
-            {"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"],
-             "summary": "Margins narrowed, though a customer renewed its contract."})}]}]}
+            {"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"], "summary": claims})}]}]}
+        with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_MODEL": "fixture-model"}), \
+                patch("contra.llm.urlopen", return_value=FakeResponse(payload)) as request:
+            answer = llm.reason("RESEARCH", result)
+        schema = json.loads(request.call_args.args[0].data)["text"]["format"]["schema"]
+        self.assertEqual(schema["properties"]["summary"]["items"]["properties"]["source_id"]["enum"], ["E-01"])
+        self.assertEqual(answer["focus"], "NEGATIVE_FACTS")
+        self.assertEqual(answer["summary"], {"text": None, "status": "REJECTED",
+                                             "reason": "calls something sharp, which its quote does not",
+                                             "rejected_text": "Margins fell sharply. [E-01]", "claims": claims})
+
+    def test_verified_claims_cite_each_sentence(self):
+        llm.reset_state()
+        self.addCleanup(llm.reset_state)
+        result = {"status": "OK", "assessment": "MIXED", "facts": [
+            {"key": "filing_excerpt", "value": "Operating margin narrowed as component costs rose.", "source_ids": ["E-01"]},
+            {"key": "filing_excerpt", "value": "A large customer renewed a multiyear contract.", "source_ids": ["E-02"]}],
+            "evidence_ids": ["E-01", "E-02"]}
+        claims = [{"sentence": "Operating margin narrowed as costs rose.", "source_id": "E-01",
+                   "quote": "Operating margin narrowed as component costs rose"},
+                  {"sentence": "A large customer renewed its contract.", "source_id": "E-02",
+                   "quote": "A large customer renewed a multiyear contract."}]
+        payload = {"model": "fixture-model", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(
+            {"focus": "MIXED_FACTS", "supporting_ids": ["E-01", "E-02"], "summary": claims})}]}]}
         with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_MODEL": "fixture-model"}), \
                 patch("contra.llm.urlopen", return_value=FakeResponse(payload)):
             answer = llm.reason("RESEARCH", result)
-        self.assertEqual(answer["summary"], {"text": "Margins narrowed, though a customer renewed its contract. [E-01] [E-02]",
-                                             "status": "VERIFIED"}, "every eligible source is cited, not only the focus IDs")
+        self.assertEqual(answer["summary"], {"text": "Operating margin narrowed as costs rose. [E-01] "
+                                                     "A large customer renewed its contract. [E-02]",
+                                             "status": "VERIFIED", "claims": claims})
 
     def test_briefings_choose_verified_model_text_or_rules(self):
         def fake(agent, result):

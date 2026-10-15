@@ -1,14 +1,14 @@
 {
  "answers": {
-  "0240c1d89e1c4311934cc2762caf68d7e8532cbb8d0eb1d4bf8d1517d811f680": {
-   "answered_at": "2026-10-15T02:51:51+00:00",
-   "cache_key": "0240c1d89e1c4311934cc2762caf68d7e8532cbb8d0eb1d4bf8d1517d811f680",
+  "0933f4f379e107adfdfe2f6f82f45c717874738c7c0e45c8c2f7a598e10fc396": {
+   "answered_at": "2026-10-15T03:23:45+00:00",
+   "cache_key": "0933f4f379e107adfdfe2f6f82f45c717874738c7c0e45c8c2f7a598e10fc396",
    "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_6bca2ef798d24bfa86dddb594e00684c",
+   "focus": "SINGLE_NAME_LIMIT",
+   "model_request_id": "req_7818483d4a2646b4b51df71af1b0a060",
    "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
+   "note": "Highlights the configured single-name exposure breach.",
+   "prompt_version": "briefing-2.1",
    "summary": {
     "status": "NOT_REQUESTED",
     "text": null
@@ -17,7 +17,7 @@
     "demo_conservative"
    ],
    "token_usage": {
-    "input_tokens": 325,
+    "input_tokens": 324,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
@@ -26,228 +26,101 @@
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 343
+    "total_tokens": 342
    }
   },
-  "0f69b19fdd6ebd8df5fce4e006ad9f394fd2d67f141d3f50270de3493df6ef15": {
-   "answered_at": "2026-10-15T02:51:50+00:00",
-   "cache_key": "0f69b19fdd6ebd8df5fce4e006ad9f394fd2d67f141d3f50270de3493df6ef15",
-   "cached": false,
-   "focus": "POSITIVE_FACTS",
-   "model_request_id": "req_f01d75750bb24d6db60e5e1fd3b97569",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights favorable facts from the cited excerpts.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "VERIFIED",
-    "text": "The company has seen improvements in its operating margin and revenue after starting new contracts. Cash flow from operations increased, and its net debt decreased. Additionally, it reported new long-term supply contracts that generate revenue. [E-GAMMA-01] [E-GAMMA-03] [E-GAMMA-02]"
-   },
-   "supporting_ids": [
-    "E-GAMMA-01",
-    "E-GAMMA-03",
-    "E-GAMMA-02"
-   ],
-   "token_usage": {
-    "input_tokens": 444,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 85,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 529
-   }
-  },
-  "14a1022609d878ed3c10c30c95c6a9c35952bdcdf4b4cf7f9dde03e0bbebd459": {
-   "answered_at": "2026-10-15T02:51:51+00:00",
-   "cache_key": "14a1022609d878ed3c10c30c95c6a9c35952bdcdf4b4cf7f9dde03e0bbebd459",
+  "11dbb7695834d9a310df9ffaf9c99866988adae781712058679c314695a8c1a9": {
+   "answered_at": "2026-10-15T03:23:49+00:00",
+   "cache_key": "11dbb7695834d9a310df9ffaf9c99866988adae781712058679c314695a8c1a9",
    "cached": false,
    "focus": "DIRECTION",
-   "model_request_id": "req_b2852d5f9ed04ce5b1554c01927165d8",
+   "model_request_id": "req_fc5c60dc8b6e46e2ad1f9665f6c38a57",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "briefing-1.6",
+   "prompt_version": "briefing-2.1",
    "summary": {
     "status": "VERIFIED",
-    "text": "The assessment indicates a bearish trend based on recent data. The momentum return is negative, and recent trading volume has been slightly higher than usual, suggesting declining market sentiment. [BAR-DELTA.NS-2026-09-15] [BAR-DELTA.NS-2026-10-13]"
+    "text": "The momentum return has decreased, indicating a decline in recent performance. The relative volume is above the typical level, meaning trading activity is higher than usual. [BAR-DELTA.NS-2026-09-15] [BAR-DELTA.NS-2026-10-13]"
    },
    "supporting_ids": [
     "BAR-DELTA.NS-2026-09-15",
     "BAR-DELTA.NS-2026-10-13"
    ],
    "token_usage": {
-    "input_tokens": 485,
+    "input_tokens": 506,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 76,
+    "output_tokens": 73,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 561
+    "total_tokens": 579
    }
   },
-  "32fe6836de1ac9e9c1b9930eaffebe80fb2b58d5650fedde6305d052dff8dad5": {
-   "answered_at": "2026-10-15T02:51:53+00:00",
-   "cache_key": "32fe6836de1ac9e9c1b9930eaffebe80fb2b58d5650fedde6305d052dff8dad5",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_ecb1e951d3bf45df97261a4cde77b7b2",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 318,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 335
-   }
-  },
-  "3c29229ec45b5919104d588372049e0ea71f2c09fe40946f3185a0c841254bb2": {
-   "answered_at": "2026-10-15T02:51:48+00:00",
-   "cache_key": "3c29229ec45b5919104d588372049e0ea71f2c09fe40946f3185a0c841254bb2",
-   "cached": false,
-   "focus": "SINGLE_NAME_LIMIT",
-   "model_request_id": "req_ffbd3e09fb8247f59efe82f059242d63",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the configured single-name exposure breach.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_conservative"
-   ],
-   "token_usage": {
-    "input_tokens": 324,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 18,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 342
-   }
-  },
-  "42a8a22ff4ac471ecfabe44b261b134ab12f4ea785b56952cc39c93b8c7c8785": {
-   "answered_at": "2026-10-15T02:51:46+00:00",
-   "cache_key": "42a8a22ff4ac471ecfabe44b261b134ab12f4ea785b56952cc39c93b8c7c8785",
-   "cached": false,
-   "focus": "SINGLE_NAME_LIMIT",
-   "model_request_id": "req_fe751f8c12fd49bf9c46ae30d54de18e",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the configured single-name exposure breach.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_conservative"
-   ],
-   "token_usage": {
-    "input_tokens": 324,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 18,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 342
-   }
-  },
-  "491cf9f25f27ce893c8eb5da4b0a65c4845dc95148bea9d012e95efd9d4f0530": {
-   "answered_at": "2026-10-15T02:51:55+00:00",
-   "cache_key": "491cf9f25f27ce893c8eb5da4b0a65c4845dc95148bea9d012e95efd9d4f0530",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_cc548b6aece24b47ae86075bcd0e556d",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 318,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 335
-   }
-  },
-  "56a5da07cdc3e7740616bbc400c8c7f6cd6a11aeb78da99fc15d5d54b3e04402": {
-   "answered_at": "2026-10-15T02:51:48+00:00",
-   "cache_key": "56a5da07cdc3e7740616bbc400c8c7f6cd6a11aeb78da99fc15d5d54b3e04402",
+  "17ca109f0917cca46fbe2ebb4185eb760ec693e1fe500ecb28f3a1e9e31dc78d": {
+   "answered_at": "2026-10-15T03:23:45+00:00",
+   "cache_key": "17ca109f0917cca46fbe2ebb4185eb760ec693e1fe500ecb28f3a1e9e31dc78d",
    "cached": false,
    "focus": "NEGATIVE_FACTS",
-   "model_request_id": "req_837a68d048284999a39929e8943e854d",
+   "model_request_id": "req_d36aa8aa06b5423ba79642da3fcbec3e",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights unfavorable facts from the cited excerpts.",
-   "prompt_version": "briefing-1.6",
+   "prompt_version": "briefing-2.1",
    "summary": {
-    "status": "VERIFIED",
-    "text": "The company's operating margin has decreased because costs for components increased, even though revenue was stronger. Additionally, higher procurement costs and delays in customer deliveries were reported, which might impact the company's performance. [E-ALPHA-01] [E-ALPHA-03] [E-ALPHA-02]"
+    "reason": "names revenue, which its quote does not mention",
+    "rejected_text": "Operating margin narrowed as component costs rose despite stronger reported revenue. [E-ALPHA-01] Management reported higher procurement costs and a delayed customer delivery schedule. [E-ALPHA-02] A large customer renewed a multiyear contract, adding to the order book. [E-ALPHA-03]",
+    "status": "REJECTED",
+    "text": null
    },
    "supporting_ids": [
     "E-ALPHA-01",
-    "E-ALPHA-02"
+    "E-ALPHA-02",
+    "E-ALPHA-03"
    ],
    "token_usage": {
-    "input_tokens": 449,
+    "input_tokens": 545,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 69,
+    "output_tokens": 162,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 518
+    "total_tokens": 707
    }
   },
-  "618e5e6e61b3b412521516c15777b38e0e89995abdec3ffe5bfd0bf06eec01ef": {
-   "answered_at": "2026-10-15T02:51:49+00:00",
-   "cache_key": "618e5e6e61b3b412521516c15777b38e0e89995abdec3ffe5bfd0bf06eec01ef",
+  "1af496c91a8663d7510c0fce2ee93edd492a3822a97ced41d10da284f959cd7e": {
+   "answered_at": "2026-10-15T03:23:46+00:00",
+   "cache_key": "1af496c91a8663d7510c0fce2ee93edd492a3822a97ced41d10da284f959cd7e",
    "cached": false,
    "focus": "MIXED_FACTS",
-   "model_request_id": "req_2f256528973a478b82f9c4dbfc9d4fe5",
+   "model_request_id": "req_42df932f02dc4788b2ab7a328b1766b7",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights mixed facts from the cited excerpts.",
-   "prompt_version": "briefing-1.6",
+   "prompt_version": "briefing-2.1",
    "summary": {
+    "claims": [
+     {
+      "quote": "Revenue was steady while operating costs remained broadly unchanged.",
+      "sentence": "Revenue was steady while operating costs remained broadly unchanged.",
+      "source_id": "E-BETA-01"
+     },
+     {
+      "quote": "Management noted mixed regional demand and stable cash balances.",
+      "sentence": "Management noted mixed regional demand and stable cash balances.",
+      "source_id": "E-BETA-04"
+     },
+     {
+      "quote": "Orders improved in one segment but weakened in another segment.",
+      "sentence": "Orders improved in one segment but weakened in another segment.",
+      "source_id": "E-BETA-03"
+     }
+    ],
     "status": "VERIFIED",
-    "text": "Revenue remained steady and operating costs stayed consistent. Management observed varied demand across regions and cash balances remained stable. Orders saw improvement in one area but declined in another. [E-BETA-01] [E-BETA-04] [E-BETA-03]"
+    "text": "Revenue was steady while operating costs remained broadly unchanged. [E-BETA-01] Management noted mixed regional demand and stable cash balances. [E-BETA-04] Orders improved in one segment but weakened in another segment. [E-BETA-03]"
    },
    "supporting_ids": [
     "E-BETA-01",
@@ -255,175 +128,27 @@
     "E-BETA-03"
    ],
    "token_usage": {
-    "input_tokens": 432,
+    "input_tokens": 525,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 68,
+    "output_tokens": 141,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 500
+    "total_tokens": 666
    }
   },
-  "795ab33489e29b058db49ff745ba9d4c563b05fd816c2651e6b501a022d585a9": {
-   "answered_at": "2026-10-15T02:51:50+00:00",
-   "cache_key": "795ab33489e29b058db49ff745ba9d4c563b05fd816c2651e6b501a022d585a9",
-   "cached": false,
-   "focus": "DIRECTION",
-   "model_request_id": "req_f1d1309699974490a366ec10b93a2822",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "VERIFIED",
-    "text": "The data suggests a bullish trend based on recent momentum and increased trading volume. Momentum return shows a positive shift, and the relative volume indicates higher than usual trading activity. [BAR-GAMMA.NS-2026-09-15] [BAR-GAMMA.NS-2026-10-13]"
-   },
-   "supporting_ids": [
-    "BAR-GAMMA.NS-2026-09-15",
-    "BAR-GAMMA.NS-2026-10-13"
-   ],
-   "token_usage": {
-    "input_tokens": 485,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 76,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 561
-   }
-  },
-  "89d206d38567ae47c7cc8b8c26555d87c2d2b855777b87c4e1353feec2ba89cf": {
-   "answered_at": "2026-10-15T02:51:46+00:00",
-   "cache_key": "89d206d38567ae47c7cc8b8c26555d87c2d2b855777b87c4e1353feec2ba89cf",
-   "cached": false,
-   "focus": "PARTICIPATION",
-   "model_request_id": "req_104f8a5ce01f49aeb92ab44884374086",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights volume participation alongside the price signal.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "VERIFIED",
-    "text": "The facts indicate that the stock has positive momentum and increased trading activity. The momentum is above the specified threshold, and the volume ratio suggests elevated trading activity, which supports a bullish assessment. [BAR-ALPHA.NS-2026-09-15] [BAR-ALPHA.NS-2026-10-13]"
-   },
-   "supporting_ids": [
-    "BAR-ALPHA.NS-2026-09-15",
-    "BAR-ALPHA.NS-2026-10-13"
-   ],
-   "token_usage": {
-    "input_tokens": 485,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 87,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 572
-   }
-  },
-  "9f36fa69d7a3f5f01c3a40a4d10b1b3501e58c56cb9f07ba87316f46fb05a6ce": {
-   "answered_at": "2026-10-15T02:51:54+00:00",
-   "cache_key": "9f36fa69d7a3f5f01c3a40a4d10b1b3501e58c56cb9f07ba87316f46fb05a6ce",
+  "2aa7d7975e53a7ce3ca630a0863f534c76ed7b949f9366103de0d7aab6368d9d": {
+   "answered_at": "2026-10-15T03:23:49+00:00",
+   "cache_key": "2aa7d7975e53a7ce3ca630a0863f534c76ed7b949f9366103de0d7aab6368d9d",
    "cached": false,
    "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_787069c3904c47d4bb4525363200bfa7",
+   "model_request_id": "req_48f0d5f089e74e1f96f4f1f1490f9469",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 318,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 335
-   }
-  },
-  "a10f7898c6262a425f978656f5e2cacfedc86a2784cf031663cda562b1eaed46": {
-   "answered_at": "2026-10-15T02:51:52+00:00",
-   "cache_key": "a10f7898c6262a425f978656f5e2cacfedc86a2784cf031663cda562b1eaed46",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_aac20ecfa7d04af888bf9554a503906d",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "NOT_REQUESTED",
-    "text": null
-   },
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 318,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 335
-   }
-  },
-  "c38c8710b32679e756e41e8980d1cdf17e77bcf8dffb8eba13fda6a115023cce": {
-   "answered_at": "2026-10-15T02:51:49+00:00",
-   "cache_key": "c38c8710b32679e756e41e8980d1cdf17e77bcf8dffb8eba13fda6a115023cce",
-   "cached": false,
-   "focus": "PARTICIPATION",
-   "model_request_id": "req_408976fc877c42c6aac309d120cfaa2b",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights volume participation alongside the price signal.",
-   "prompt_version": "briefing-1.6",
-   "summary": {
-    "status": "VERIFIED",
-    "text": "The facts indicate a small positive change in recent returns and a slightly lower than usual trading volume. These details suggest that trading activity has been relatively subdued, with no strong directional movement. [BAR-BETA.NS-2026-09-15] [BAR-BETA.NS-2026-10-13]"
-   },
-   "supporting_ids": [
-    "BAR-BETA.NS-2026-09-15",
-    "BAR-BETA.NS-2026-10-13"
-   ],
-   "token_usage": {
-    "input_tokens": 478,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 84,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 562
-   }
-  },
-  "e72d03ebb07bc4ed794b4bcc5a84eed22a8d962ba3ebad33e917babfe82585e8": {
-   "answered_at": "2026-10-15T02:51:50+00:00",
-   "cache_key": "e72d03ebb07bc4ed794b4bcc5a84eed22a8d962ba3ebad33e917babfe82585e8",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_6f9064fe88484cf597a97217e2315730",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "briefing-1.6",
+   "prompt_version": "briefing-2.1",
    "summary": {
     "status": "NOT_REQUESTED",
     "text": null
@@ -443,8 +168,322 @@
     },
     "total_tokens": 343
    }
+  },
+  "3ed3105484b41da73550cf76fa47be1b93c437646462932e70ee19b02cac4719": {
+   "answered_at": "2026-10-15T03:23:47+00:00",
+   "cache_key": "3ed3105484b41da73550cf76fa47be1b93c437646462932e70ee19b02cac4719",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_23d5d466b32d4ba2a10c324b6da9f9cc",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_conservative"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
+   }
+  },
+  "56477abb839d4ece9b0476a59c7a75008e06c20ede79f0bfb4bf9ef4c15e6a3d": {
+   "answered_at": "2026-10-15T03:23:46+00:00",
+   "cache_key": "56477abb839d4ece9b0476a59c7a75008e06c20ede79f0bfb4bf9ef4c15e6a3d",
+   "cached": false,
+   "focus": "PARTICIPATION",
+   "model_request_id": "req_9c2c942e1ea244bba86df49894f3d09c",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights volume participation alongside the price signal.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The measured momentum return shows a small positive change. The relative volume was slightly below the typical level. These facts are based on recent data. [BAR-BETA.NS-2026-09-15] [BAR-BETA.NS-2026-10-13]"
+   },
+   "supporting_ids": [
+    "BAR-BETA.NS-2026-09-15",
+    "BAR-BETA.NS-2026-10-13"
+   ],
+   "token_usage": {
+    "input_tokens": 499,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 71,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 570
+   }
+  },
+  "67c1fb3e9f16eb11df1f2c8f38312c11a69806fe7ec97f339c7cb5a5543652e6": {
+   "answered_at": "2026-10-15T03:23:46+00:00",
+   "cache_key": "67c1fb3e9f16eb11df1f2c8f38312c11a69806fe7ec97f339c7cb5a5543652e6",
+   "cached": false,
+   "focus": "SINGLE_NAME_LIMIT",
+   "model_request_id": "req_6a5f15e0af1b431db63fba9851d725fa",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights the configured single-name exposure breach.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_conservative"
+   ],
+   "token_usage": {
+    "input_tokens": 324,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 342
+   }
+  },
+  "725cdb5594832aa1024dd3d771997c4b3e02d3bee3b43d43181d471f3ffb38fa": {
+   "answered_at": "2026-10-15T03:23:50+00:00",
+   "cache_key": "725cdb5594832aa1024dd3d771997c4b3e02d3bee3b43d43181d471f3ffb38fa",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_f124e318057e4a8faa6239b82496905e",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
+  },
+  "a98ffba147b75eda1f14e326828aee644d32589cc727de357e0a1cc7e0c79498": {
+   "answered_at": "2026-10-15T03:23:48+00:00",
+   "cache_key": "a98ffba147b75eda1f14e326828aee644d32589cc727de357e0a1cc7e0c79498",
+   "cached": false,
+   "focus": "POSITIVE_FACTS",
+   "model_request_id": "req_69222c11e0e0464abcfddc27f9aa15c4",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights favorable facts from the cited excerpts.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "claims": [
+     {
+      "quote": "The company reported new long term supply contracts with contracted revenue.",
+      "sentence": "The company reported new long term supply contracts with contracted revenue.",
+      "source_id": "E-GAMMA-02"
+     },
+     {
+      "quote": "Operating margin improved and revenue increased after new contracts commenced.",
+      "sentence": "Operating margin improved and revenue increased after new contracts commenced.",
+      "source_id": "E-GAMMA-01"
+     },
+     {
+      "quote": "Operating cash flow rose and net debt decreased during the period.",
+      "sentence": "Operating cash flow rose and net debt decreased during the period.",
+      "source_id": "E-GAMMA-03"
+     }
+    ],
+    "status": "VERIFIED",
+    "text": "The company reported new long term supply contracts with contracted revenue. [E-GAMMA-02] Operating margin improved and revenue increased after new contracts commenced. [E-GAMMA-01] Operating cash flow rose and net debt decreased during the period. [E-GAMMA-03]"
+   },
+   "supporting_ids": [
+    "E-GAMMA-01",
+    "E-GAMMA-03",
+    "E-GAMMA-02"
+   ],
+   "token_usage": {
+    "input_tokens": 540,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 154,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 694
+   }
+  },
+  "af4c49adb37d0a489f7d684fb6dbd1b2894fd47b6cf19874b7cc1b7b7fe9dd03": {
+   "answered_at": "2026-10-15T03:23:51+00:00",
+   "cache_key": "af4c49adb37d0a489f7d684fb6dbd1b2894fd47b6cf19874b7cc1b7b7fe9dd03",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_95989f37032048c88b79acf629eeb1e1",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
+  },
+  "c490a09fe4efb988a24837efec04e27b2a5df435a32e113f195c2cc043deb889": {
+   "answered_at": "2026-10-15T03:23:45+00:00",
+   "cache_key": "c490a09fe4efb988a24837efec04e27b2a5df435a32e113f195c2cc043deb889",
+   "cached": false,
+   "focus": "PARTICIPATION",
+   "model_request_id": "req_836a5795d111455e880452d59a270ee5",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights volume participation alongside the price signal.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The measured momentum return shows an increase, and the relative volume is higher than average. This indicates that there is notable activity and positive momentum in the observed asset. [BAR-ALPHA.NS-2026-09-15] [BAR-ALPHA.NS-2026-10-13]"
+   },
+   "supporting_ids": [
+    "BAR-ALPHA.NS-2026-09-15",
+    "BAR-ALPHA.NS-2026-10-13"
+   ],
+   "token_usage": {
+    "input_tokens": 506,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 82,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 588
+   }
+  },
+  "ccb7890ccffb6a5dbe39f39d0dbe67febfbac3431aeb69e540f9061fc18b52ab": {
+   "answered_at": "2026-10-15T03:23:47+00:00",
+   "cache_key": "ccb7890ccffb6a5dbe39f39d0dbe67febfbac3431aeb69e540f9061fc18b52ab",
+   "cached": false,
+   "focus": "DIRECTION",
+   "model_request_id": "req_4c4efa2789ef412f9bb2db54f8729bed",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights the validated 20-session price direction.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "reason": "speculates beyond the measured facts",
+    "rejected_text": "The measured momentum return indicates an upward trend, and the relative volume is higher than typical levels. These facts suggest a bullish market condition. [BAR-GAMMA.NS-2026-09-15] [BAR-GAMMA.NS-2026-10-13]",
+    "status": "REJECTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "BAR-GAMMA.NS-2026-09-15",
+    "BAR-GAMMA.NS-2026-10-13"
+   ],
+   "token_usage": {
+    "input_tokens": 506,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 75,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 581
+   }
+  },
+  "cf52670184b4f6c844de1a6d71ec015614cda7194ee9e02a096894090132dd7b": {
+   "answered_at": "2026-10-15T03:23:51+00:00",
+   "cache_key": "cf52670184b4f6c844de1a6d71ec015614cda7194ee9e02a096894090132dd7b",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_095a2a0549e7457eba4c9a34f4d79533",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
+  },
+  "fc408bf01bccf5962a296b6810bb7478e5c95c4102dcb32c6dfadebe6cf18a66": {
+   "answered_at": "2026-10-15T03:23:53+00:00",
+   "cache_key": "fc408bf01bccf5962a296b6810bb7478e5c95c4102dcb32c6dfadebe6cf18a66",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_58fd0d935aa4408abedef55e6c4f0ee2",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-2.1",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
   }
  },
  "model": "gpt-4.1-nano-2025-04-14",
- "prompt_version": "briefing-1.6"
+ "prompt_version": "briefing-2.1"
 }

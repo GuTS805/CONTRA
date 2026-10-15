@@ -15,7 +15,7 @@ MODELS_URL = "https://api.openai.com/v1/models"
 # Low-cost models that support the Responses API with strict JSON-schema output, cheapest first.
 PREFERRED_MODELS = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4.1-mini", "gpt-5-nano", "gpt-5-mini"]
 _resolved = {"model": None, "detail": None}
-PROMPT_VERSION = "briefing-1.6"
+PROMPT_VERSION = "briefing-2.1"
 FOCUS = {
     "MARKET": ["DIRECTION", "PARTICIPATION", "UNCERTAINTY"],
     "RESEARCH": ["POSITIVE_FACTS", "NEGATIVE_FACTS", "MIXED_FACTS", "UNCERTAINTY"],
@@ -202,6 +202,9 @@ SUMMARY_AGENTS = {"MARKET", "RESEARCH"}
 NEGATION = {"no", "not", "without", "never", "none", "nor", "zero"}
 JUDGMENT = re.compile(r"\b(?:acceptable|unacceptable|healthy|unhealthy|safe|unsafe|dangerous|attractive|"
                       r"undervalued|overvalued|cheap|expensive)\b")
+# Market facts are two measurements; readings of mood or intent behind them are not in the facts.
+SPECULATION = re.compile(r"\b(?:suggest\w*|impl(?:y|ies|ied|ying)|outlook|sentiment|attitude|mood|interest|"
+                         r"might|may|could|likely|unlikely|expect\w*|anticipat\w*|potential\w*|possibl\w*)\b")
 OFF_TOPIC = re.compile(r"\b(?:portfolio|limit|limits|cap|caps|breach\w*)\b")
 OPPOSITE = {
     "MARKET": {"BULLISH": r"bearish|downtrend|declin\w*|fell|falling|lower prices?|negative momentum",
@@ -218,6 +221,67 @@ def _unnegated(pattern: str, text: str) -> bool:
         if not any(word in NEGATION or word.endswith("n't") for word in before):
             return True
     return False
+
+
+# Price-direction phrases a market summary may not use against the sign of the measured return.
+PRICE_UP = (r"(?:upward|rising|higher|positive|gain\w*)\s+(?:(?!(?:not|no|never|without)\b)\w+\s+){0,2}?(?:prices?|momentum|trend|returns?|movement)|"
+            r"(?:prices?|momentum|trend|returns?)\s+(?:(?!(?:not|no|never|without)\b)\w+\s+){0,3}?(?:rose|risen|rising|up|upward|higher|gain\w*|increas\w*|positive)")
+PRICE_DOWN = (r"(?:downward|falling|lower|negative|loss\w*)\s+(?:(?!(?:not|no|never|without)\b)\w+\s+){0,2}?(?:prices?|momentum|trend|returns?|movement)|"
+              r"(?:prices?|momentum|trend|returns?)\s+(?:(?!(?:not|no|never|without)\b)\w+\s+){0,3}?(?:fell|fallen|falling|down|downward|lower|declin\w*|decreas\w*|negative)")
+
+# Research claims: every sentence carries an exact quote from the one excerpt it rests on. A sentence may
+# only name a topic, a direction of change or a quality word that its own quote also contains, so a
+# direction stated about one quantity cannot be borrowed from another excerpt.
+UP = (r"up|upward|upwards|rais\w*|rise|rises|rose|risen|rising|increas\w*|higher|boost\w*|surg\w*|jump\w*|"
+      r"accelerat\w*|grew|grow|grows|growing|growth|expand\w*|expansion|improv\w*|gain\w*|widen\w*|strengthen\w*|stronger")
+DOWN = (r"down|downward|downwards|cut|cuts|cutting|lower|lowered|lowering|fall|falls|fell|fallen|falling|declin\w*|"
+        r"decreas\w*|drop\w*|reduc\w*|narrow\w*|shrink\w*|shrank|contraction|deteriorat\w*|slow\w*|weaken\w*|"
+        r"weaker|squeez\w*|plung\w*|pressur\w*")
+QUALITY = ("strong", "robust", "resilient", "solid", "steady", "stable", "weak", "sharp", "slight", "significant", "record")
+TOPICS = {
+    "revenue": r"revenues?|sales|topline", "margin": r"margins?|profitability", "profit": r"profits?|earnings|eps",
+    "cost": r"costs?|expenses?|procurement", "cash": r"cash|liquidity", "debt": r"debt|borrowings?|loans?|leverage",
+    "guidance": r"guidance|outlook|forecasts?", "order": r"orders?|bookings?|backlog",
+    "contract": r"contracts?|deals?|engagements?|collaborations?", "demand": r"demand",
+    "dividend": r"dividends?|buybacks?", "capacity": r"capacity|facility|facilities",
+}
+NEGATED = re.compile(r"\b(?:no|not|without|never|none|nor)\b|n't")
+
+
+def _words(text: str) -> str:
+    return " ".join(text.replace("’", "'").replace("‘", "'").lower().split())
+
+
+def verify_claims(claims, excerpts: dict) -> str | None:
+    """Check research claims against the excerpts they cite; None when every claim passes."""
+    if not isinstance(claims, list) or not 1 <= len(claims) <= 3:
+        return "needs one to three claims"
+    for claim in claims:
+        if not isinstance(claim, dict) or not all(isinstance(claim.get(key), str)
+                                                  for key in ("sentence", "source_id", "quote")):
+            return "malformed claim"
+    for claim in claims:
+        source = excerpts.get(claim["source_id"])
+        # Edge punctuation is not part of the quoted words ("...20%-22%." quoting "...20%-22%").
+        sentence, quote = _words(claim["sentence"]), _words(claim["quote"]).strip(" .,;:")
+        if source is None:
+            return "cites a source outside the eligible set"
+        if not 4 <= len(quote.split()) <= 40 or quote not in _words(source):
+            return "quote is not exact text from its cited excerpt"
+        if CITATION.search(sentence) or len(re.findall(r"[.!?](?:\s|$)", sentence)) > 1:
+            return "a claim must be one sentence without inline citations"
+        for name, pattern in TOPICS.items():
+            if re.search(rf"\b(?:{pattern})\b", sentence) and not re.search(rf"\b(?:{pattern})\b", quote):
+                return f"names {name}, which its quote does not mention"
+        for name, pattern in (("an increase", UP), ("a decrease", DOWN)):
+            if re.search(rf"\b(?:{pattern})\b", sentence) and not re.search(rf"\b(?:{pattern})\b", quote):
+                return f"states {name} that its quote does not state"
+        for word in QUALITY:
+            if re.search(rf"\b{word}\w*", sentence) and not re.search(rf"\b{word}\w*", quote):
+                return f"calls something {word}, which its quote does not"
+        if bool(NEGATED.search(sentence)) != bool(NEGATED.search(quote)):
+            return "negation does not match its quote"
+    return None
 
 
 def verify_summary(text, agent: str, input_facts: dict) -> str | None:
@@ -251,6 +315,13 @@ def verify_summary(text, agent: str, input_facts: dict) -> str | None:
     opposite = OPPOSITE.get(agent, {}).get(input_facts["assessment"])
     if opposite and _unnegated(opposite, lowered):
         return "contradicts the assessment"
+    if agent == "MARKET" and SPECULATION.search(lowered):
+        return "speculates beyond the measured facts"
+    if agent == "MARKET":
+        change = next((fact["value"] for fact in input_facts["facts"] if fact["key"] == "momentum_return"), None)
+        if isinstance(change, (int, float)) and ((change < 0 and _unnegated(PRICE_UP, lowered)) or
+                                                 (change > 0 and _unnegated(PRICE_DOWN, lowered))):
+            return "contradicts the sign of the measured price change"
     return None
 
 
@@ -269,12 +340,17 @@ def reason(agent: str, result: dict, owner: str | None = None) -> dict:
     # Offer only the choices post-validation accepts, so strict decoding cannot produce an invalid answer.
     eligible_ids = list(dict.fromkeys(result["evidence_ids"]))
     # Risk is pure arithmetic on the investor's limits; its exact rule-based briefing is clearer than prose.
-    wants_summary = agent in SUMMARY_AGENTS
+    wants_summary = agent in SUMMARY_AGENTS and (agent != "RESEARCH" or bool(eligible_ids))
     properties = {
         "focus": {"type": "string", "enum": [name for name in FOCUS[agent] if name in allowed_focus(agent, result)]},
         "supporting_ids": {"type": "array", "items": {"type": "string", "enum": eligible_ids} if eligible_ids
                            else {"type": "string"}}}
-    if wants_summary:
+    if wants_summary and agent == "RESEARCH":
+        properties["summary"] = {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["sentence", "source_id", "quote"],
+            "properties": {"sentence": {"type": "string"}, "source_id": {"type": "string", "enum": eligible_ids},
+                           "quote": {"type": "string"}}}}
+    elif wants_summary:
         properties["summary"] = {"type": "string"}
     schema = {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
     input_facts = build_input(agent, result)
@@ -286,10 +362,19 @@ def reason(agent: str, result: dict, owner: str | None = None) -> dict:
     _spend_call(owner)
     instructions = ("You explain one analysis agent's validated output to a retail investor. "
                     "Select one permitted focus and one to three eligible supporting IDs (none only if no ID is eligible). ")
-    if wants_summary:
+    if wants_summary and agent == "RESEARCH":
+        instructions += (
+            "Then write the summary as one to three claims. Each claim is one short plain-English sentence that states "
+            "one thing a single excerpt says, the ID of that excerpt, and the exact words from it (a short contiguous "
+            "span, copied character for character) that state it. Every topic, direction of change and descriptive word "
+            "in the sentence must also appear in its quote; do not combine excerpts in one sentence. ")
+    elif wants_summary:
         instructions += (
             "Then write a summary of one to three short sentences in plain English using only the supplied facts. "
             "You may cite supporting IDs in square brackets, for example [E-ALPHA-01]. "
+            "State only what was measured: do not interpret it as sentiment, interest, outlook or what it suggests. ")
+    if wants_summary:
+        instructions += (
             "Do not write any numbers or digits: the interface already shows the exact values. "
             "Describe what the facts mean in words. Do not mention portfolios, limits or caps. "
             "Do not add judgments the facts do not state, such as whether a level is acceptable or healthy. "
@@ -319,7 +404,18 @@ def reason(agent: str, result: dict, owner: str | None = None) -> dict:
             len(ids) != len(set(ids)) or any(not isinstance(value, str) or value not in eligible for value in ids) or \
             (eligible and not ids):
         raise ValueError("Model focus or source IDs failed post-validation")
-    if wants_summary:
+    if wants_summary and agent == "RESEARCH":
+        claims = selected["summary"]
+        excerpts = {source: fact["value"] for fact in result["facts"] for source in fact.get("source_ids", [])
+                    if isinstance(fact.get("value"), str)}
+        problem = verify_claims(claims, excerpts)
+        text = None if problem in ("needs one to three claims", "malformed claim") else \
+            " ".join(f"{claim['sentence'].strip()} [{claim['source_id']}]" for claim in claims)
+        if problem is None:
+            problem = verify_summary(text, agent, input_facts)
+        summary = {"text": text, "status": "VERIFIED", "claims": claims} if problem is None else \
+            {"text": None, "status": "REJECTED", "reason": problem, "rejected_text": text, "claims": claims}
+    elif wants_summary:
         text = selected["summary"].strip() if isinstance(selected["summary"], str) else selected["summary"]
         # The model rarely cites inline. The summary is written from every eligible fact, so cite all of them
         # (two or three IDs) rather than only the focus IDs, which can omit the source of a stated claim.
