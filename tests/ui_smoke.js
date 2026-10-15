@@ -20,6 +20,7 @@ async function analysis(investor){const response=await authed(base+'/v1/analyses
  assert.equal(guest.status,201);cookie=guest.headers.get('set-cookie').split(';')[0];
  await vm.runInContext('render()',context);
  assert(element('#view').innerHTML.includes('Start an analysis'));
+ assert(element('#view').innerHTML.includes('Run the 60-second demo'));
  const first=await analysis('demo_conservative');context.first=first;
  await vm.runInContext('loadRecent()',context);
  assert(element('#recent-runs').innerHTML.includes('saved runs'));

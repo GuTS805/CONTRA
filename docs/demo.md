@@ -4,7 +4,7 @@ Start the server with `python -m contra.server`, open `http://localhost:8000` an
 
 | Time | Action | What it proves |
 | --- | --- | --- |
-| 0:00–0:35 | Point out the **SYNTHETIC DEMO MODE** banner. Select ALPHA.NS and Conservative. | Honest provenance and frozen fixture date. |
+| 0:00–0:35 | Read the four **How it works** steps, then click **Run the 60-second demo**. It runs ALPHA.NS for the Conservative investor and opens the report with a short guide. | What the system does, before any detail; honest provenance and a frozen fixture date. |
 | 0:35–1:20 | Run analysis. Read the **Personalized portfolio action**: reduce by about 5,000, from 15% to 10%. Open a cited reason. | An explainable, sized action with the rule that fired, cited reasons and what would change it. |
 | 1:20–1:40 | Open the agent trace and timing. | Three independently executed pipelines with overlapping intervals; each labels model reasoning or deterministic fallback. |
 | 1:40–2:20 | Read **What each agent found**. Then, in **Ask the filings**, click "Is profitability getting squeezed?" and type "weather forecast". | Verified model briefings with citations. Semantic search finds a paraphrase that shares no words with the excerpt, and returns nothing when no source supports an answer. |
