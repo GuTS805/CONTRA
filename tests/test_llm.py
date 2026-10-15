@@ -56,6 +56,9 @@ class ModelAdapterTests(unittest.TestCase):
             sent = json.loads(request.call_args.args[0].data)
             self.assertEqual(sent["text"]["format"]["type"], "json_schema")
             self.assertEqual(sent["text"]["format"]["schema"]["additionalProperties"], False)
+            properties = sent["text"]["format"]["schema"]["properties"]
+            self.assertEqual(properties["focus"]["enum"], ["NEGATIVE_FACTS"], "only the valid focus is offered")
+            self.assertEqual(properties["supporting_ids"]["items"]["enum"], ["E-01"], "only eligible IDs are offered")
             payload["output"][0]["content"][0]["text"] = json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["MADE-UP"]})
             llm.reset_state()
             with patch("contra.llm.urlopen", return_value=FakeResponse(payload)):
