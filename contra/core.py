@@ -249,7 +249,8 @@ async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: 
                 model_metadata = await asyncio.to_thread(llm.reason, name, result)
                 execution_mode = "LLM_REASONED"
             except Exception as exc:
-                result.setdefault("warnings", []).append(f"Model reasoning unavailable; deterministic fallback ({type(exc).__name__}).")
+                reason = "daily model call limit reached" if isinstance(exc, llm.DailyLimitReached) else type(exc).__name__
+                result.setdefault("warnings", []).append(f"Model reasoning unavailable; deterministic fallback ({reason}).")
     except Exception as exc:
         result = {"status": "ERROR", "assessment": "UNKNOWN", "facts": [],
                   "evidence_ids": [], "warnings": [str(exc)], "evidence_confidence": None}

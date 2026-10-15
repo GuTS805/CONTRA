@@ -35,7 +35,7 @@ CONTRA_LLM=1
 CONTRA_MODEL=gpt-6-astra
 ```
 
-The server loads `.env` at startup. Variables already set in the shell take precedence. The startup log states whether model reasoning is enabled. Each analysis makes up to three model calls, one per agent. The model may only pick a permitted focus and cite source IDs that the agent already holds; numbers, statuses and the action stay code-computed. An invalid or failed response falls back to deterministic reasoning, and the report labels each agent's mode. The key is never sent to the browser or stored in a report. The model adapter has mocked tests only; a live call has not been verified from this workspace.
+The server loads `.env` at startup. Variables already set in the shell take precedence. The startup log states whether model reasoning is enabled. Each analysis makes up to three model calls, one per agent. The model may only pick a permitted focus and cite source IDs that the agent already holds; numbers, statuses and the action stay code-computed. An invalid or failed response falls back to deterministic reasoning, and the report labels each agent's mode. To protect a small credit balance, an identical agent input reuses the earlier validated answer instead of paying again, and `CONTRA_LLM_DAILY_LIMIT` (default 150, 60 in `.env` and on Render) caps paid calls per UTC day. After the cap, agents fall back with a visible warning; `/health` reports today's usage. The key is never sent to the browser or stored in a report. The model adapter has mocked tests only; a live call has not been verified from this workspace.
 
 Implementation notes: [architecture](docs/architecture.md) · [five-minute demo](docs/demo.md) · [acceptance status](docs/acceptance.md) · [improvement log](docs/improvement-log.md).
 

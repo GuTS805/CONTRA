@@ -11,5 +11,7 @@ services:
         value: "1"
       - key: CONTRA_MODEL
         value: gpt-6-astra
+      - key: CONTRA_LLM_DAILY_LIMIT
+        value: "60"
       - key: OPENAI_API_KEY
         sync: false

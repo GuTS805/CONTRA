@@ -18,7 +18,7 @@ from . import auth, live
 from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
-from .llm import configured as llm_configured
+from .llm import configured as llm_configured, usage as llm_usage
 from .settings import load_env
 from . import store
 from .store import RunIntegrityError, RevisionConflict, baseline_profiles
@@ -175,7 +175,7 @@ class Handler(BaseHTTPRequestHandler):
         with database() as db:
             db.execute("SELECT 1")
         return self._send(200, {"status": "ok", "version": "0.2", "fixture_loaded": True,
-                                "llm_enabled": llm_configured()})
+                                "llm_enabled": llm_configured(), "llm_usage": llm_usage()})
 
     # GET ----------------------------------------------------------------------
 
@@ -463,7 +463,7 @@ def main():
           + (f" (public hosts: {', '.join(sorted(public_hosts))})" if public else ""), flush=True)
     if loaded:
         print(f"Loaded settings from .env: {', '.join(sorted(loaded))}", flush=True)
-    print("Model reasoning: " + ("enabled" if llm_configured() else
+    print("Model reasoning: " + (f"enabled ({os.environ.get('CONTRA_MODEL', 'gpt-6-astra')}, up to {llm_usage()['limit']} calls per day)" if llm_configured() else
           "off (set CONTRA_LLM=1 and OPENAI_API_KEY in .env to enable)"), flush=True)
     try:
         server.serve_forever()
