@@ -12,7 +12,10 @@
    "published_at": "2026-07-23",
    "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
-   "excerpt": "Infosys (NSE, BSE, NYSE: INFY), a global leader in AI-first business consulting and technology services, delivered $5,082 million in Q1 revenues, year on year growth of 2.4% and sequential growth of 1.0% in constant currency. Operating margin was at 21.1%, sequential increase of 0.2%. EPS growth was 14.9% year on year in rupee terms. TCV of large deal wins was $3.6 billion, with 61% net new."
+   "excerpt": "Infosys (NSE, BSE, NYSE: INFY), a global leader in AI-first business consulting and technology services, delivered $5,082 million in Q1 revenues, year on year growth of 2.4% and sequential growth of 1.0% in constant currency. Operating margin was at 21.1%, sequential increase of 0.2%. EPS growth was 14.9% year on year in rupee terms. TCV of large deal wins was $3.6 billion, with 61% net new.",
+   "tone_label": "POSITIVE",
+   "tone_quote": "Infosys (NSE, BSE, NYSE: INFY), a global leader in AI-first business consulting and technology services, delivered $5,082 million in Q1 revenues, year on year growth of 2.4% and sequential growth of 1.0% in constant currency. Operating margin was at 21.1%, sequential increase of 0.2%. EPS growth was 14.9% year on year in rupee terms. TCV of large deal wins was $3.6 billion, with 61% net new.",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P02",
@@ -20,7 +23,10 @@
    "published_at": "2026-07-23",
    "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
-   "excerpt": "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%"
+   "excerpt": "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%",
+   "tone_label": "NEUTRAL_OR_MIXED",
+   "tone_quote": "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P03",
@@ -28,7 +34,10 @@
    "published_at": "2026-07-23",
    "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
-   "excerpt": "Our resilient margins of 21.1% and consistent strong cash generation reflect the strength of our business model, disciplined execution and continued focus on operational excellence in a challenging business environment"
+   "excerpt": "Our resilient margins of 21.1% and consistent strong cash generation reflect the strength of our business model, disciplined execution and continued focus on operational excellence in a challenging business environment",
+   "tone_label": "POSITIVE",
+   "tone_quote": "Our resilient margins of 21.1% and consistent strong cash generation reflect the strength of our business model, disciplined execution and continued focus on operational excellence in a challenging business environment",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P04",
@@ -36,7 +45,10 @@
    "published_at": "2026-07-23",
    "form": "Form 6-K, Exhibit 99.2: Q1 FY27 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000034/exv99w02.htm",
-   "excerpt": "Infosys renewed its long-standing collaboration with Mercedes-Benz Group AG, moving one of the automotive sector’s largest hybrid cloud and data center operations to an AI-led operating model. As part of the extended engagement, Infosys will embed AIOps and agentic AI across the IT landscape, powered by Infosys Topaz and Infosys Cobalt, to further enhance reliability, efficiency and innovation."
+   "excerpt": "Infosys renewed its long-standing collaboration with Mercedes-Benz Group AG, moving one of the automotive sector’s largest hybrid cloud and data center operations to an AI-led operating model. As part of the extended engagement, Infosys will embed AIOps and agentic AI across the IT landscape, powered by Infosys Topaz and Infosys Cobalt, to further enhance reliability, efficiency and innovation.",
+   "tone_label": "NEUTRAL_OR_MIXED",
+   "tone_quote": "Infosys renewed its long-standing collaboration with Mercedes-Benz Group AG, moving one of the automotive sector's largest hybrid cloud and data center operations to an AI-led operating model.",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P05",
@@ -44,7 +56,10 @@
    "published_at": "2026-04-23",
    "form": "Form 6-K, Exhibit 99.2: Q4 and FY26 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000014/exv99w02.htm",
-   "excerpt": "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency. Q4 operating margin was at 20.9%."
+   "excerpt": "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency. Q4 operating margin was at 20.9%.",
+   "tone_label": "POSITIVE",
+   "tone_quote": "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency.",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P06",
@@ -52,7 +67,10 @@
    "published_at": "2026-04-23",
    "form": "Form 6-K, Exhibit 99.2: Q4 and FY26 press release (IFRS, USD)",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000106749126000014/exv99w02.htm",
-   "excerpt": "Revenue growth of 1.5%-3.5% in constant currency"
+   "excerpt": "Revenue growth of 1.5%-3.5% in constant currency",
+   "tone_label": "NEUTRAL_OR_MIXED",
+   "tone_quote": "Revenue growth of 1.5%-3.5% in constant currency",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P07",
@@ -60,7 +78,10 @@
    "published_at": "2026-06-15",
    "form": "Form 20-F for the year ended March 31, 2026",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000119312526270520/infy-20260331.htm",
-   "excerpt": "Our principal sources of liquidity are cash and cash equivalents, investments, and the cash flow that we generate from operations. We have no outstanding borrowings. We believe that our working capital is sufficient to meet our current requirements."
+   "excerpt": "Our principal sources of liquidity are cash and cash equivalents, investments, and the cash flow that we generate from operations. We have no outstanding borrowings. We believe that our working capital is sufficient to meet our current requirements.",
+   "tone_label": "POSITIVE",
+   "tone_quote": "We have no outstanding borrowings. We believe that our working capital is sufficient to meet our current requirements.",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   },
   {
    "id": "E-INFY-P08",
@@ -68,7 +89,10 @@
    "published_at": "2026-06-15",
    "form": "Form 20-F for the year ended March 31, 2026",
    "source_uri": "https://www.sec.gov/Archives/edgar/data/1067491/000119312526270520/infy-20260331.htm",
-   "excerpt": "We believe that a sustained reduction in IT spending by clients, a longer sales cycle, or a continued economic downturn in any of the various geographic locations or business segments in which we operate, could result in a decline in our revenues and negatively impact our liquidity and cash resources."
+   "excerpt": "We believe that a sustained reduction in IT spending by clients, a longer sales cycle, or a continued economic downturn in any of the various geographic locations or business segments in which we operate, could result in a decline in our revenues and negatively impact our liquidity and cash resources.",
+   "tone_label": "NEGATIVE",
+   "tone_quote": "could result in a decline in our revenues and negatively impact our liquidity and cash resources.",
+   "tone_model": "gpt-4.1-nano-2025-04-14"
   }
  ]
 }

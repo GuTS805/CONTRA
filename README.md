@@ -71,7 +71,7 @@ The three agents run concurrently against one prepared analysis. Each reports it
 | --- | --- | --- |
 | **Momentum** | Change from the close 20 sessions earlier | Requires 21 valid daily bars |
 | **Relative volume** | Latest volume divided by the median of the previous 20 sessions | Measures participation, not price direction |
-| **Filing tone** | Tone over retrieved, dated excerpts | User labels or a disclosed word-list heuristic; absent evidence can abstain |
+| **Filing tone** | Tone over retrieved, dated excerpts | User labels, a model classification accepted only with an exact supporting quote, or a disclosed word-list fallback; absent evidence can abstain |
 | **FII/DII flows** | Foreign and domestic net activity, buy minus sell, in INR crore | Provisional, market-wide context; it says nothing about purchases of the selected stock |
 
 Opposing FII and DII signs remain **divergent**. Missing or stale flow data abstains. The original observation is kept when a saved run is compared with another profile. [Methodology and source limits](docs/institutional-flows.md).
@@ -116,7 +116,7 @@ OPENAI_API_KEY=your-key-here
 CONTRA_LLM=1
 ```
 
-The server checks model-written claims against permitted facts, supporting quotes and source IDs. Invalid, unavailable or over-budget responses fall back to labeled rule summaries. Research questions can use cached or live embeddings alongside TF-IDF; set `CONTRA_EMBEDDINGS=0` for keyword-only search. Paid calls have per-account and server-wide daily limits plus persistent caches. The key stays server-side, and `.env` is ignored by Git. See [retrieval and model boundaries](docs/architecture.md#retrieval-and-model-boundaries).
+The server checks model-written claims against permitted facts, supporting quotes and source IDs. Invalid, unavailable or over-budget responses fall back to labeled rule summaries. A model also classifies the tone of each filing excerpt as positive, negative or neutral. The tone counts only if the model quotes the excerpt exactly; otherwise the word list is used and labeled. The Infosys excerpts ship with their verified tones and quotes. Research questions can use cached or live embeddings alongside TF-IDF; set `CONTRA_EMBEDDINGS=0` for keyword-only search. Paid calls have per-account and server-wide daily limits plus persistent caches. The key stays server-side, and `.env` is ignored by Git. See [retrieval and model boundaries](docs/architecture.md#retrieval-and-model-boundaries).
 
 ### Add a real company
 

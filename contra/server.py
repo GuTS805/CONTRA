@@ -350,6 +350,13 @@ class Handler(BaseHTTPRequestHandler):
                 if len(store.user_documents(db, owner)) >= MAX_DOCUMENTS:
                     raise ValueError(f"You can store up to {MAX_DOCUMENTS} filing excerpts")
                 document = live.make_document(ticker, body)
+                if document["tone_source"] == "LEXICON_HEURISTIC":
+                    try:
+                        verdict = llm.classify_tone(document["excerpt"], owner)
+                        document.update(tone=verdict["tone"], tone_source="MODEL_VERIFIED", tone_quote=verdict["quote"],
+                                        tone_model=verdict["model_version"])
+                    except Exception:
+                        pass  # keep the word-list tone; the library labels it as such
                 store.save_document(db, owner, document)
                 return self._send(201, document)
             if path == "/v1/examples/public-filings":

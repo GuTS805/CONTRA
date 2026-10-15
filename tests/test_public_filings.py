@@ -4,7 +4,7 @@ from hashlib import sha256
 import html
 import unittest
 
-from contra import public_filings
+from contra import llm, public_filings
 from contra.core import prepare
 
 
@@ -24,6 +24,16 @@ class PublicFilingTests(unittest.TestCase):
                 self.assertTrue(20 <= len(doc["excerpt"]) <= 4000)
                 self.assertEqual(doc["excerpt"], " ".join(doc["excerpt"].split()), "whitespace is collapsed")
                 self.assertIn(doc["tone"], (-1.0, 0.0, 1.0))
+
+    def test_shipped_model_tones_carry_an_exact_quote(self):
+        docs = public_filings.documents()
+        modelled = [doc for doc in docs if doc["tone_source"] == "MODEL_VERIFIED"]
+        self.assertEqual(len(modelled), len(docs), "every shipped excerpt has a classified tone")
+        for doc in modelled:
+            with self.subTest(doc=doc["id"]):
+                self.assertIsNone(llm.verify_tone({"tone": {1: "POSITIVE", -1: "NEGATIVE", 0: "NEUTRAL_OR_MIXED"}[doc["tone"]],
+                                                   "quote": doc["tone_quote"]}, doc["excerpt"]))
+                self.assertTrue(doc["tone_model"])
 
     def test_documents_pass_snapshot_integrity_checks(self):
         bars = [{"id": f"BAR-INFY.NS-2026-{month:02d}-{day:02d}", "ticker": "INFY.NS",

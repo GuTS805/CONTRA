@@ -79,6 +79,44 @@ class SummaryVerificationTests(unittest.TestCase):
         self.assertNotIn("summary", sent["text"]["format"]["schema"]["properties"])
         self.assertEqual(answer["summary"], {"text": None, "status": "NOT_REQUESTED"})
 
+    def test_tone_needs_a_valid_label_and_an_exact_quote(self):
+        text = "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%"
+        good = {"tone": "NEGATIVE", "quote": "Revenue Guidance Revised to 1.5%-3.0%,"}
+        self.assertIsNone(llm.verify_tone(good, text), "edge punctuation is not part of the quoted words")
+        for choice, reason in (
+                ({"tone": "BULLISH", "quote": "Revenue Guidance Revised"}, "not one of the allowed"),
+                ({"tone": "POSITIVE", "quote": "Revenue guidance was raised"}, "not exact text"),
+                ({"tone": "POSITIVE", "quote": ""}, "not exact text"),
+                ({"tone": "POSITIVE", "quote": "Revised"}, "too short"),
+                ("POSITIVE", "not one of the allowed")):
+            with self.subTest(choice=choice):
+                self.assertIn(reason, llm.verify_tone(choice, text) or "PASSED")
+
+    def test_classify_tone_is_cached_budgeted_and_falls_back(self):
+        llm.reset_state()
+        self.addCleanup(llm.reset_state)
+        text = "Management lowered the full year revenue range and reported a delayed customer delivery schedule."
+        reply = {"model": "fixture-model", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(
+            {"tone": "NEGATIVE", "quote": "lowered the full year revenue range"})}]}]}
+        env = {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_MODEL": "fixture-model",
+               "CONTRA_LLM_ACCOUNT_DAILY_LIMIT": "1"}
+        with patch.dict(os.environ, env), patch("contra.llm.urlopen", return_value=FakeResponse(reply)) as request:
+            first = llm.classify_tone(text, "owner-a")
+            second = llm.classify_tone(text, "owner-a")
+            self.assertEqual((first["tone"], first["label"], first["cached"]), (-1, "NEGATIVE", False))
+            self.assertTrue(second["cached"])
+            self.assertEqual(request.call_count, 1, "an identical excerpt is classified once")
+            with self.assertRaises(llm.DailyLimitReached):
+                llm.classify_tone(text + " Extra words keep this a new excerpt.", "owner-a")
+        bad = {"model": "fixture-model", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(
+            {"tone": "POSITIVE", "quote": "strong growth in every region"})}]}]}
+        with patch.dict(os.environ, {**env, "CONTRA_LLM_ACCOUNT_DAILY_LIMIT": "9"}),                 patch("contra.llm.urlopen", return_value=FakeResponse(bad)):
+            with self.assertRaises(ValueError):
+                llm.classify_tone("A different excerpt about quarterly operating costs and orders.", "owner-b")
+        with patch.dict(os.environ, {"CONTRA_LLM": "0"}):
+            with self.assertRaises(RuntimeError):
+                llm.classify_tone(text)
+
     def test_research_claims_must_match_their_own_quotes(self):
         guidance = "FY 27 Revenue Guidance Revised to 1.5%-3.0%, Margin guidance Retained at 20%-22%"
         quarter = "Q4 revenues were $5,040 million, growth of 4.1% year on year in constant currency."
@@ -116,6 +154,22 @@ class SummaryVerificationTests(unittest.TestCase):
         for claims, reason in failing:
             with self.subTest(reason=reason):
                 self.assertIn(reason, llm.verify_claims(claims, excerpts) or "PASSED")
+
+    def test_institutional_flows_and_volume_are_not_mistaken_for_advice_or_price_direction(self):
+        falling = {**MARKET, "assessment": "BEARISH",
+                   "facts": [{**MARKET["facts"][0], "value": -0.04}, MARKET["facts"][1]]}
+        self.assertIsNone(llm.verify_summary(
+            "Foreign institutions were net sellers while domestic institutions were net buyers across the market [BAR-A-1].",
+            "MARKET", falling))
+        self.assertIsNone(llm.verify_summary(
+            "Net buying by domestic institutions was higher than net selling by foreign institutions [BAR-A-1].",
+            "MARKET", falling))
+        self.assertIsNone(llm.verify_summary(
+            "Momentum fell over the window, and relative volume rose to a higher level [BAR-A-1].", "MARKET", falling))
+        self.assertIsNone(llm.verify_summary(
+            "There was a decrease in momentum and an increase in relative volume [BAR-A-1].", "MARKET", falling))
+        self.assertIn("advice", llm.verify_summary("Consider buying while momentum lasts [BAR-A-1].", "MARKET", MARKET))
+        self.assertIn("sign", llm.verify_summary("Momentum shows an increase over the window [BAR-A-1].", "MARKET", falling))
 
     def test_market_summary_must_match_the_sign_of_the_price_change(self):
         falling = {**MARKET, "assessment": "NEUTRAL",

@@ -18,17 +18,27 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 from urllib.request import Request, urlopen
 
 from .live import lexicon_tone
 
 FIXTURE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "public_filings.json"
 BLOCK_TAGS = {"p", "div", "tr", "br", "li", "h1", "h2", "h3"}
+TONE_VALUES = {"POSITIVE": 1, "NEGATIVE": -1, "NEUTRAL_OR_MIXED": 0}
 
 
 @lru_cache(maxsize=1)
 def example() -> dict:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+
+def _tone_fields(item: dict) -> dict:
+    """The shipped model tone with its verified quote, or the word-list tone when none was classified."""
+    if "tone_label" in item:
+        return {"tone": TONE_VALUES[item["tone_label"]], "tone_source": "MODEL_VERIFIED",
+                "tone_quote": item["tone_quote"], "tone_model": item["tone_model"]}
+    return {"tone": lexicon_tone(item["excerpt"]), "tone_source": "LEXICON_HEURISTIC"}
 
 
 def documents() -> list[dict]:
@@ -39,8 +49,8 @@ def documents() -> list[dict]:
         text = item["excerpt"]
         out.append({"id": item["id"], "document_id": "DOC-" + item["id"][2:], "ticker": spec["ticker"],
                     "title": item["title"], "published_at": item["published_at"], "excerpt": text,
-                    "char_start": 0, "char_end": len(text), "tone": lexicon_tone(text),
-                    "tone_source": "LEXICON_HEURISTIC", "mode": "PUBLIC_FILING",
+                    "char_start": 0, "char_end": len(text),
+                    **_tone_fields(item), "mode": "PUBLIC_FILING",
                     "source_type": "sec_filing_excerpt", "form": item["form"], "source_uri": item["source_uri"],
                     "source_hash": "sha256:" + sha256(text.encode()).hexdigest()})
     return out
@@ -82,7 +92,29 @@ def verify(user_agent: str, fetch=None) -> list[str]:
     return problems
 
 
+def classify(write: bool = True) -> list[str]:
+    """Classify every excerpt's tone with the configured model and ship the verified result in the fixture."""
+    from . import llm
+    from .settings import load_env
+    load_env()
+    if not llm.configured():
+        raise SystemExit("Set OPENAI_API_KEY and CONTRA_LLM=1 in .env first.")
+    spec = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    lines = []
+    for item in spec["excerpts"]:
+        verdict = llm.classify_tone(item["excerpt"])
+        item.update(tone_label=verdict["label"], tone_quote=verdict["quote"], tone_model=verdict["model_version"])
+        lines.append(f"{item['id']}: {verdict['label']} | word list {lexicon_tone(item['excerpt']):+.1f} | {item['title']}")
+    if write:
+        FIXTURE.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return lines
+
+
 def main() -> None:
+    if "--tone" in sys.argv:
+        for line in classify():
+            print(line)
+        return
     agent = os.environ.get("SEC_USER_AGENT", "").strip()
     if "@" not in agent:
         raise SystemExit('Set SEC_USER_AGENT to a name and contact email, e.g. "Jane Doe jane@example.com".')
