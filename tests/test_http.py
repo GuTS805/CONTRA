@@ -91,6 +91,13 @@ class HttpTests(unittest.TestCase):
         with urlopen(self.base + "/", timeout=5) as response:
             self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
             self.assertIn("frame-ancestors 'none'", response.headers["Content-Security-Policy"])
+            self.assertIn(b'/theme.css', response.read())
+        with urlopen(self.base + "/theme.css", timeout=5) as response:
+            self.assertEqual(response.headers["Content-Type"], "text/css; charset=utf-8")
+            self.assertIn(b'/hero-art.png', response.read())
+        with urlopen(self.base + "/hero-art.png", timeout=5) as response:
+            self.assertEqual(response.headers["Content-Type"], "image/png")
+            self.assertTrue(response.read(8).startswith(b"\x89PNG\r\n\x1a\n"))
 
     def test_analysis_replay_evidence_and_measured_evaluation(self):
         _, catalog = self.request_json("/v1/stocks")

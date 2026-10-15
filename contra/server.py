@@ -184,11 +184,14 @@ class Handler(BaseHTTPRequestHandler):
     # GET ----------------------------------------------------------------------
 
     def _get(self, path):
-        static = {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css"}
+        static = {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css",
+                  "/theme.css": "theme.css", "/hero-art.png": "hero-art.png"}
         if path in static:
             filename = static[path]
-            mime = "text/html" if filename.endswith("html") else "text/javascript" if filename.endswith("js") else "text/css"
-            return self._send(200, (WEB / filename).read_bytes(), mime + "; charset=utf-8")
+            mime = ("text/html; charset=utf-8" if filename.endswith("html") else
+                    "text/javascript; charset=utf-8" if filename.endswith("js") else
+                    "text/css; charset=utf-8" if filename.endswith("css") else "image/png")
+            return self._send(200, (WEB / filename).read_bytes(), mime)
         if path.startswith("/analysis/") or path in ("/portfolio", "/evidence", "/evaluation"):
             return self._send(200, (WEB / "index.html").read_bytes(), "text/html; charset=utf-8")
         if not path.startswith("/v1/"):
