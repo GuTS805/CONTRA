@@ -134,6 +134,21 @@ The tests cover:
 
 With a server running, `node tests/ui_smoke.js` (or `CONTRA_BASE_URL=... node tests/ui_smoke.js`) starts a guest session and checks that every view renders without a runtime error.
 
+## Commercial relevance
+
+**Who it serves.** Retail investors who already hold a few stocks and want to know whether a new signal fits *their* portfolio. A second audience is the platforms that serve them: brokers, wealth apps and registered advisers.
+
+**How it could make money.**
+- **Freemium research tool for investors.** The free tier covers guest use and the demo scenarios. A paid tier adds more live symbols, filing ingestion for a watchlist, and an alert when a holding crosses the investor's own single-name or sector cap.
+- **API for fintech platforms and advisers.** A platform sends a symbol and a client profile, and gets back a sized action with cited reasons and a checksummed report. Advisers already have to record why they gave a recommendation. Each saved CONTRA report is that record: the frozen evidence, the profile revision and the rule that fired.
+
+**Why the unit cost stays low.**
+- Actions come from deterministic rules, so a run needs no model call.
+- The model only writes the short briefings. It is the cheapest suitable one (`gpt-4.1-nano`), its answers are cached by input, and every call is capped per account and per day.
+- The demo scenarios currently cost zero paid calls.
+
+**What is not yet validated.** No user research or pricing test has been run. Giving personalized advice to the public in India requires SEBI registration. CONTRA therefore stays a research and record-keeping tool. Any advice would come from the registered party using it.
+
 ## Scope and limits
 
 - The live price source is unofficial. Uploaded filing text is not verified against the issuer. The Infosys excerpts are verified against SEC EDGAR by `python -m contra.public_filings`.
