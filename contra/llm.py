@@ -10,6 +10,10 @@ from threading import Lock
 from urllib.request import Request, urlopen
 
 API_URL = "https://api.openai.com/v1/responses"
+MODELS_URL = "https://api.openai.com/v1/models"
+# Low-cost models that support the Responses API with strict JSON-schema output, cheapest first.
+PREFERRED_MODELS = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4.1-mini", "gpt-5-nano", "gpt-5-mini"]
+_resolved = {"model": None, "detail": None}
 PROMPT_VERSION = "focus-selection-1.0"
 FOCUS = {
     "MARKET": ["DIRECTION", "PARTICIPATION", "UNCERTAINTY"],
@@ -74,6 +78,7 @@ def reset_state() -> None:
     with _lock:
         _cache.clear()
         _usage.update(day=None, calls=0, owners={})
+        _resolved.update(model=None, detail=None)
 
 
 def _spend_call(owner: str | None) -> None:
@@ -135,8 +140,38 @@ def allowed_focus(agent: str, result: dict) -> set[str]:
     return {"WITHIN_LIMITS"}
 
 
+def resolve_model(refresh: bool = False) -> str | None:
+    """CONTRA_MODEL if set; otherwise the first preferred model this key can access.
+
+    Listing models is a free API call. The choice is made once per process.
+    """
+    explicit = os.environ.get("CONTRA_MODEL", "").strip()
+    if explicit:
+        _resolved.update(model=explicit, detail="set by CONTRA_MODEL")
+        return explicit
+    if _resolved["model"] and not refresh:
+        return _resolved["model"]
+    if not configured():
+        return None
+    request = Request(MODELS_URL, headers={"Authorization": "Bearer " + os.environ["OPENAI_API_KEY"]})
+    try:
+        with urlopen(request, timeout=8) as response:
+            available = {item.get("id") for item in json.load(response).get("data", [])}
+    except Exception as exc:
+        _resolved.update(model=None, detail=f"could not list models ({type(exc).__name__}); check the key")
+        return None
+    choice = next((name for name in PREFERRED_MODELS if name in available), None)
+    _resolved.update(model=choice, detail="cheapest available preferred model" if choice else
+                     "none of the preferred models is available; set CONTRA_MODEL")
+    return choice
+
+
+def model_status() -> dict:
+    return {"model": _resolved["model"], "detail": _resolved["detail"]}
+
+
 def cache_key_for(agent: str, result: dict, model: str | None = None) -> str:
-    model = model or os.environ.get("CONTRA_MODEL", "gpt-6-astra")
+    model = model or resolve_model() or "unresolved"
     input_facts = {"agent": agent, "status": result["status"], "assessment": result["assessment"],
                    "facts": result["facts"], "eligible_evidence_ids": result["evidence_ids"],
                    "single_asset_breach": result.get("single_asset_breach"),
@@ -151,7 +186,9 @@ def reason(agent: str, result: dict, owner: str | None = None) -> dict:
     """
     if not configured():
         raise RuntimeError("LLM adapter is disabled or missing a server-side key")
-    model = os.environ.get("CONTRA_MODEL", "gpt-6-astra")
+    model = resolve_model()
+    if not model:
+        raise RuntimeError("No usable model: " + (_resolved["detail"] or "set CONTRA_MODEL"))
     schema = {"type": "object", "properties": {
         "focus": {"type": "string", "enum": FOCUS[agent]},
         "supporting_ids": {"type": "array", "items": {"type": "string"}}

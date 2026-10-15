@@ -176,7 +176,8 @@ class Handler(BaseHTTPRequestHandler):
         with database() as db:
             db.execute("SELECT 1")
         return self._send(200, {"status": "ok", "version": "0.2", "fixture_loaded": True,
-                                "llm_enabled": llm_configured(), "llm_usage": llm_usage()})
+                                "llm_enabled": llm_configured(), "llm_model": llm.model_status()["model"],
+                                "llm_usage": llm_usage()})
 
     # GET ----------------------------------------------------------------------
 
@@ -474,7 +475,9 @@ def main():
         print(f"Loaded settings from .env: {', '.join(sorted(loaded))}", flush=True)
     if seeded:
         print(f"Preloaded {seeded} cached model answers for the demo scenarios", flush=True)
-    print("Model reasoning: " + (f"enabled ({os.environ.get('CONTRA_MODEL', 'gpt-6-astra')}, up to {llm_usage()['limit']} calls per day)" if llm_configured() else
+    model = llm.resolve_model() if llm_configured() else None
+    print("Model reasoning: " + (f"enabled ({model}, {llm.model_status()['detail']}; up to {llm_usage()['limit']} calls per day)" if model else
+          f"key found, but {llm.model_status()['detail']}" if llm_configured() else
           "off (set CONTRA_LLM=1 and OPENAI_API_KEY in .env to enable)"), flush=True)
     try:
         server.serve_forever()

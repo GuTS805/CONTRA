@@ -20,6 +20,26 @@ class FakeResponse(io.BytesIO):
 class ModelAdapterTests(unittest.TestCase):
     def setUp(self):
         llm.reset_state()
+        model = patch.dict(os.environ, {"CONTRA_MODEL": "fixture-model"})
+        model.start()
+        self.addCleanup(model.stop)
+        self.addCleanup(llm.reset_state)
+
+    def test_model_is_picked_from_the_account_when_not_set(self):
+        listing = {"data": [{"id": "gpt-4.1-mini"}, {"id": "gpt-4o-mini"}, {"id": "text-embedding-3-small"}]}
+        with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_MODEL": ""}):
+            with patch("contra.llm.urlopen", return_value=FakeResponse(listing)) as request:
+                self.assertEqual(llm.resolve_model(), "gpt-4o-mini", "cheapest preferred model the key can use")
+                self.assertEqual(llm.resolve_model(), "gpt-4o-mini")
+                self.assertEqual(request.call_count, 1, "models are listed once per process")
+                self.assertTrue(request.call_args.args[0].full_url.endswith("/v1/models"))
+            llm.reset_state()
+            with patch("contra.llm.urlopen", return_value=FakeResponse({"data": [{"id": "some-other-model"}]})):
+                self.assertIsNone(llm.resolve_model())
+                with self.assertRaisesRegex(RuntimeError, "No usable model"):
+                    llm.reason("RESEARCH", {"status": "OK", "assessment": "BEARISH", "facts": [], "evidence_ids": []})
+            with patch.dict(os.environ, {"CONTRA_MODEL": "my-model"}):
+                self.assertEqual(llm.resolve_model(), "my-model")
 
     def test_structured_focus_accepts_only_validated_ids(self):
         result = {"status": "OK", "assessment": "BEARISH", "facts": [
