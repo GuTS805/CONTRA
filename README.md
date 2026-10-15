@@ -1,165 +1,171 @@
-# CONTRA
+<div align="center">
 
-**Live demo:** <https://contra-h0nw.onrender.com>. Click **Continue as guest**. The free instance sleeps when idle, so the first load can take up to a minute.
+# CONTRA<span>.</span>
 
-CONTRA is an evidence-first investment research assistant. Three agents run concurrently on one frozen snapshot: Market (price momentum, volume and institutional-flow context), Research (retrieval over dated filing excerpts) and Risk (the investor's own limits). CONTRA then gives a personalized, sized portfolio action with cited reasons and the conditions that would change it.
+### Intelligence through disagreement
 
-It works on two kinds of data, and each report labels which one it used:
+**Three independent agents. Four signal dimensions. One evidence-backed action sized to an investor's portfolio.**
 
-- **Live:** any NSE (`.NS`) or BSE (`.BO`) symbol you add. Prices are real daily closes from Yahoo Finance's public chart endpoint. Filings are excerpts you paste, stored with their publication date and hash.
-- **Real-company example:** click **Load Infosys** on the terminal. This adds INFY.NS with live prices and 8 exact excerpts from Infosys's SEC filings (the April and July 2026 results releases and the 2026 Form 20-F), each linked to its filing on SEC EDGAR.
-- **Synthetic:** four built-in scenario stocks with known expected outcomes, used for demos and the evaluation suite.
+[Live app](https://contra-h0nw.onrender.com) · [60-second product walkthrough](#the-60-second-demo) · [Architecture](#how-it-works) · [Evaluation](#evaluation) · [Wild Bugs submission notes](docs/wild-bugs-submission.md)
 
-This is research software, not investment advice. It never places trades.
+[![CI](https://github.com/GuTS805/CONTRA/actions/workflows/ci.yml/badge.svg)](https://github.com/GuTS805/CONTRA/actions/workflows/ci.yml)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-252525?logo=python)
+![Runtime dependencies](https://img.shields.io/badge/Python_runtime_dependencies-0-ff641b)
+![Research prototype](https://img.shields.io/badge/status-research_prototype-252525)
+
+</div>
+
+![CONTRA intelligence terminal showing the three-agent workspace and analysis controls](docs/assets/terminal.png)
+
+> **Try it:** Open the [live app](https://contra-h0nw.onrender.com), choose **Continue as guest**, then select **ALPHA.NS + Conservative**. Render's free instance may take about a minute to wake up.
+
+CONTRA helps an investor inspect *why* market and filing signals disagree, then shows how that evidence interacts with their own holdings and limits. Every run keeps the dated inputs, cited passages, agent findings, profile revision and computed action together. The product is research software: it does not place trades or claim to predict returns.
+
+## The 60-second demo
+
+1. **Run ALPHA.NS for Conservative.** Momentum is positive, while the eligible filing evidence is negative. The report labels the result **Conflicted** and sizes a reduction from the profile's 15% holding to its 10% single-stock cap.
+2. **Open a cited reason.** The source drawer shows the exact frozen filing excerpt, date and source details behind it.
+3. **Compare all three investors.** The market snapshot and its hash stay fixed; holdings and limits change the personal action.
+4. **Ask the filings** about operating margin. Search returns the exact stored passage. An unsupported question returns no invented answer.
+5. **Open Evaluation.** Run scenario checks, degraded-input checks and the measured latency benchmark.
+
+The browser walkthrough can also be recorded with captions using [`scripts/make_demo_video.py`](scripts/make_demo_video.py). The generated MP4 and SRT stay under the git-ignored `data/demo/` directory.
+
+## Why the recommendation changes
+
+The chart uses the repository's **synthetic baseline profiles**. It compares the existing ALPHA position with each investor's single-stock cap. A cap is a limit, not a target allocation.
+
+![Grouped bar chart: Conservative has 15% ALPHA versus a 10% cap, Growth 15% versus 30%, Starter 0% versus 15%](docs/assets/profile-comparison.svg)
+
+| Profile | ALPHA weight | Single-stock cap | Result on the same conflicted snapshot |
+| --- | ---: | ---: | --- |
+| Conservative | 15% | 10% | Reduce exposure by about 5,000 in the synthetic portfolio |
+| Growth | 15% | 30% | Hold and review |
+| Starter | 0% | 15% | Do not open a new position |
+
+The recommendation is computed from stored portfolio values and policy rules. Changing the profile does not rewrite the price bars, filings or institutional-flow observation used in the comparison.
+
+## How it works
+
+```mermaid
+flowchart TD
+    A[Daily price and volume bars] --> S[As-of filter and frozen snapshot]
+    B[Dated filing excerpts] --> S
+    C[Market-wide FII / DII observation] --> S
+    S --> M[Market agent: momentum, volume, flows]
+    S --> R[Research agent: retrieve and cite filings]
+    P[Saved investor profile and holdings] --> K[Risk agent: exposure and caps]
+    M --> X[Evidence and disagreement synthesis]
+    R --> X
+    K --> X
+    X --> Y[Deterministic sizing and explained action]
+    Y --> U[Interactive report and source drawer]
+    Y --> D[Saved report with input and output hashes]
+```
+
+The three agents run concurrently against one prepared analysis. Each reports its own status, evidence, warnings and timing. If an input is missing or an agent degrades, the report shows that condition instead of silently manufacturing a signal. Optional model text is checked against already validated facts and source IDs; the action and numbers remain code-computed. See the [implementation architecture](docs/architecture.md).
+
+### Four signal dimensions
+
+| Dimension | What CONTRA computes | Important boundary |
+| --- | --- | --- |
+| **Momentum** | Change from the close 20 sessions earlier | Requires 21 valid daily bars |
+| **Relative volume** | Latest volume divided by the median of the previous 20 sessions | Measures participation, not price direction |
+| **Filing tone** | Tone over retrieved, dated excerpts | User labels or a disclosed word-list heuristic; absent evidence can abstain |
+| **FII/DII flows** | Foreign and domestic net activity, buy minus sell, in INR crore | Provisional, market-wide context; it says nothing about purchases of the selected stock |
+
+Opposing FII and DII signs remain **divergent**. Missing or stale flow data abstains. The original observation is kept when a saved run is compared with another profile. [Methodology and source limits](docs/institutional-flows.md).
+
+<details>
+<summary><strong>View a sample analysis report</strong></summary>
+
+![CONTRA analysis report with signal cards and evidence-backed findings](docs/assets/report.png)
+
+</details>
+
+## Data modes and provenance
+
+| Mode | Prices | Filings | Best use |
+| --- | --- | --- | --- |
+| **Synthetic scenarios** | Four reproducible fixture stocks | Labeled fixture excerpts | Demo, regression checks and known expected outcomes |
+| **Live NSE/BSE symbol** | Daily closes from Yahoo Finance's public chart endpoint | Excerpts the user adds, with date and optional source URL | Explore an Indian equity against supplied evidence |
+| **Infosys example** | Live `INFY.NS` prices | Eight exact excerpts linked to Infosys SEC filings | Try a real-company evidence flow quickly |
+
+Live prices are cached for six hours. A provider failure uses cached bars with a warning, or returns an error when no cache exists. Current-day bars are skipped until the session closes. The Yahoo endpoint is unofficial and closes are not adjusted for splits or dividends. Uploaded excerpts are not independently verified; the included Infosys excerpts can be rechecked against SEC EDGAR with `python -m contra.public_filings` and an identifying `SEC_USER_AGENT`.
+
+Every saved report records the as-of date and hashes of its frozen inputs. Hashes help detect changed records; they are not cryptographic signatures against someone who controls the database. Historical FII/DII observations collected later are not point-in-time backtest data.
 
 ## Run locally
 
-Requires Python 3.10+. There are no third-party packages.
+**Requirements:** Python 3.10 or newer. The server has no third-party Python runtime packages. Node is needed only for the optional UI smoke test.
 
 ```powershell
+git clone https://github.com/GuTS805/CONTRA.git
+cd CONTRA
 python -m contra.server
 ```
 
-Open <http://localhost:8000>. You can create an account or continue as a guest. Each account gets its own investor profiles, holdings, live symbols, filings and saved reports. The SQLite database is created at `data/contra.sqlite3`; `CONTRA_DB` can point elsewhere.
+Open <http://localhost:8000> and continue as a guest or create an account. The app stores each account's profiles, holdings, uploaded filings and reports in SQLite at `data/contra.sqlite3`. Set `CONTRA_DB` to use another path. On Windows, `scripts/start-local.ps1` can start a hidden server and check its health.
 
-On Windows, the background starter checks health before launching a hidden server:
+### Optional model briefings and semantic search
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
-```
+The deterministic analysis works without an API key. To enable model-written Market and Research briefings, add a local `.env` file:
 
-### Model reasoning (optional)
-
-Put your key in `.env` in the project root. Git ignores this file.
-
-```
-OPENAI_API_KEY=sk-...
+```dotenv
+OPENAI_API_KEY=your-key-here
 CONTRA_LLM=1
 ```
 
-The key is enough. Without `CONTRA_MODEL`, the server lists the models your key can access (a free call) and uses the first available of `gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5-nano` and `gpt-5-mini`. Set `CONTRA_MODEL` to override this choice.
+The server checks model-written claims against permitted facts, supporting quotes and source IDs. Invalid, unavailable or over-budget responses fall back to labeled rule summaries. Research questions can use cached or live embeddings alongside TF-IDF; set `CONTRA_EMBEDDINGS=0` for keyword-only search. Paid calls have per-account and server-wide daily limits plus persistent caches. The key stays server-side, and `.env` is ignored by Git. See [retrieval and model boundaries](docs/architecture.md#retrieval-and-model-boundaries).
 
-The server loads `.env` at startup. Variables already set in the shell take precedence. The startup log states whether model reasoning is enabled. Each analysis makes up to three model calls, one per agent. The model may only pick a permitted focus and cite source IDs that the agent already holds; numbers, statuses and the action stay code-computed. An invalid or failed response falls back to deterministic reasoning, and the report labels each agent's mode. To protect a small credit balance, an identical agent input reuses the earlier validated answer instead of paying again, and `CONTRA_LLM_DAILY_LIMIT` (default 150, 60 in `.env` and on Render) caps paid calls per UTC day. After the cap, agents fall back with a visible warning; `/health` reports today's usage. The key is never sent to the browser or stored in a report. The adapter has mocked regression tests. Prior warm-up artifacts contain model responses; this audit did not make new paid calls.
+### Add a real company
 
-#### What the model does
+1. Add an NSE (`.NS`) or BSE (`.BO`) symbol in **Research universe**. For a ready example, click **Load Infosys**.
+2. In **Evidence library**, add a dated excerpt and, if available, an HTTPS source URL. Infosys already includes linked SEC excerpts.
+3. Set the holding values and caps in **Portfolio**.
+4. Run an analysis, then inspect source drawers and compare profiles.
 
-- **Agent briefings:** under "What each agent found", the Market and Research agents each get one to three plain-language sentences from the model, written only from that agent's validated facts. Code then checks every briefing. It must cite only that agent's sources. For Research, each sentence must come with the exact words it rests on from one cited excerpt. Any topic (revenue, guidance, debt…), direction of change (rose, cut…), quality word (strong, stable…) or negation in the sentence must also appear in that quote. On real Infosys filings, the model once wrote that revenue guidance was "revised upward" when the range had been narrowed. This rule now rejects that. Market summaries may not interpret the measurements ("suggests", "outlook", "sentiment"), and may not describe the price direction against the sign of the measured change. It may not contain any digit, because a correct number can still be attached to the wrong quantity, so the exact values come from code on the cards. It may not use advice or prediction words (buy, sell, should, will rise), judgment words (acceptable, healthy, undervalued) or portfolio-limit terms. It may not contradict the agent's direction; "not bearish" is not treated as bearish. A briefing that fails any check is dropped and replaced by a rule-based summary, which the card labels. The Risk agent always uses its exact rule-based summary.
-- **Filing search:** "Ask the filings" combines OpenAI `text-embedding-3-small` similarity (256 dimensions) with TF-IDF. A passage qualifies if it shares a meaningful word with the question or reaches a similarity of 0.38. That threshold was set on calibration questions: relevant ones scored 0.43–0.67, unrelated ones 0.04–0.32. Only exact stored excerpts are returned, and nothing is generated. Without embeddings, search falls back to keywords and says so.
-- On the held-out paraphrase set in Evaluation (7 questions plus 4 unrelated ones), Recall@3 is 86% with keywords only and 100% with hybrid search, and all 4 unrelated questions return nothing. One relevant question scored 0.389, just above the threshold. These questions use the synthetic excerpts, so the numbers do not establish quality on real filings.
+## Evaluation
 
-#### Keeping a small credit balance safe for judges
-
-- **Cache:** an identical agent input reuses its earlier validated answer, and the database keeps those answers across restarts.
-- **Embeddings:** these are cached the same way and have their own limits: `CONTRA_EMBED_ACCOUNT_DAILY_LIMIT` (default 40 requests per account per day) and `CONTRA_EMBED_DAILY_LIMIT` (default 300). `CONTRA_EMBEDDINGS=0` turns semantic search off.
-- **Daily limits:** each account may trigger at most `CONTRA_LLM_ACCOUNT_DAILY_LIMIT` paid calls per day (default 9, about three analyses). The whole server stops at `CONTRA_LLM_DAILY_LIMIT`. One visitor therefore cannot use up the budget before a judge arrives. Once a limit is reached, the agents continue rule-based and the report says the model is paused. Facts and the action do not change.
-- **Warm-up:** before judging, run `python -m contra.warm` once. It answers every synthetic scenario for all three sample profiles. Repeated inputs are answered once, so this needs 19 paid calls. In the latest warm-up, 15 of 21 Market and Research briefings passed verification, and the other 6 fell back to labeled rule summaries. It saves the answers to `data/fixtures/model_cache.json`, and the vectors for the synthetic filings, the Infosys excerpts, suggested questions and evaluation questions to `data/fixtures/embedding_cache.json`. Commit that file, and the server preloads it, including on a fresh hosted instance whose disk was wiped. Judges can reuse matching cached inputs without a paid call. Changes to agent facts, prompts or model identity invalidate affected cache entries. Each reused answer is labeled "cached answer from <date>". The cache is keyed by model name, so run the warm-up again if you change `CONTRA_MODEL`.
-
-Wild Bugs PS 04 submission: [rubric-to-proof map and pitch](docs/wild-bugs-submission.md).
-
-Implementation notes: [architecture](docs/architecture.md) · [five-minute demo](docs/demo.md) · [acceptance status](docs/acceptance.md) · [improvement log](docs/improvement-log.md).
-
-## Using live data
-
-1. On the terminal, add a symbol such as `RELIANCE.NS` and pick its sector. CONTRA fetches about six months of daily bars. A bar for the current day is skipped until the session closes.
-2. In **Evidence library**, paste a filing excerpt for that symbol with its publication date and an optional HTTPS source link. Tone comes from a small finance word list unless you label it Positive, Neutral or Negative.
-3. On **Portfolio**, enter your holding values. Every symbol you add appears there.
-4. Run the analysis. The report freezes the bars and filings visible at the as-of date, hashes them, and saves the result to your account.
-
-For a ready example, **Load Infosys** does steps 1–2 with real filings. `data/fixtures/public_filings.json` holds each excerpt with its form, filing date and SEC URL. Excerpts are copied exactly; only whitespace is collapsed. To re-check all of them against SEC EDGAR:
-
-```powershell
-$env:SEC_USER_AGENT = "Your Name you@example.com"   # SEC asks automated clients to identify themselves
-python -m contra.public_filings
-```
-
-Prices are cached for six hours. If Yahoo Finance cannot be reached, CONTRA uses the cached prices and shows a warning in the report. With no cache, the request fails with a clear error. The Yahoo endpoint is unofficial: it can change, rate-limit or block hosting IP ranges, and it carries no redistribution licence. Closes are not adjusted for splits or dividends.
-
-## Demo with the synthetic scenarios
-
-1. Select **ALPHA.NS** and **Conservative**, then run the analysis. Price momentum is positive while cited filings are negative, and the 15% position exceeds the 10% cap. The action is **Reduce exposure** by about 5,000 (15% → 10%).
-2. Click **Compare all 3 investors**. The same frozen snapshot is run for Conservative (10% cap), Growth (30% cap) and Starter (a newer, cash-heavy investor who does not hold ALPHA). The market hash and signals are identical, but the actions differ: reduce by about 5,000, hold and review, and do not open a position. **Compare Growth** shows the full side-by-side for one pair.
-3. In **Ask the filings**, click "Is profitability getting squeezed?". No excerpt contains those words, but semantic search finds the margin passage. The answer is the exact cited excerpt. A question that no filing supports returns no passage instead of a guess.
-4. Select **GAMMA.NS** to see aligned evidence and a sized room to add, or **DELTA.NS** to see an honest partial result with no eligible filing.
-5. Open **Evaluation** to run the scenario matrix (state and action), check citation validity and Recall@3, and run a 10-execution latency benchmark.
-
-## Deploy
-
-The repository includes a `Dockerfile` and a Render Blueprint (`render.yaml`).
-
-1. Push this repository to GitHub, which is already done for `GuTS805/CONTRA`.
-2. In Render, choose **New → Blueprint** and select the repository.
-3. When Render asks, enter `OPENAI_API_KEY`, or leave it empty to run without a model.
-4. Open the `onrender.com` URL once the deploy is live.
-
-Hosted mode is enabled by `CONTRA_PUBLIC=1`, which the Dockerfile sets. The server then accepts only the hostnames in `CONTRA_ALLOWED_HOSTS`, plus `RENDER_EXTERNAL_HOSTNAME`, which Render sets automatically. Session cookies become `Secure`, and HSTS is sent. On another host, set `CONTRA_ALLOWED_HOSTS=your.domain` and `PORT`.
-
-On Render's free plan, the disk is temporary: accounts and saved reports are lost on each redeploy or restart. To keep them, attach a persistent disk mounted at `/data` (a paid plan). Free instances also sleep when idle, so the first request after a pause takes a while.
-
-Security in hosted mode:
-
-- Passwords are hashed with scrypt.
-- Sessions use random tokens; only their hashes are stored, and cookies are HttpOnly and SameSite=Lax.
-- Every API route except `/health` requires a session.
-- Each user's data is scoped to their account.
-- Mutations require JSON and a same-origin `Origin` header.
-- Login, sign-up, guest creation, symbol additions and analyses are rate-limited per process.
-- There is no email verification or password reset.
-
-## API
-
-All `/v1` routes except the auth routes require the session cookie.
-
-- **Auth:** `POST /v1/auth/signup`, `/v1/auth/login`, `/v1/auth/guest`, `/v1/auth/logout`; `GET /v1/auth/me`.
-- **Data:** `GET /v1/stocks`, `/v1/evidence`, `/v1/evidence/{id}`; `POST /v1/securities` (`ticker`, `sector`); `DELETE /v1/securities/{ticker}`; `POST /v1/documents` (`ticker`, `title`, `published_at`, `excerpt`, optional `source_uri` and `tone`); `DELETE /v1/documents/{id}`; `POST /v1/examples/public-filings` (adds the Infosys example; repeating it adds nothing).
-- **Profiles:** `GET /v1/profiles`, `/v1/profiles/{id}/portfolio`, `/v1/profiles/{id}/insights`; `PUT /v1/profiles/{id}`.
-- **Analyses:** `POST /v1/analyses` (`ticker`, `investor_id`, optional `as_of`); `GET /v1/analyses`, `/v1/analyses/{run_id}`, `/v1/analyses/{run_id}/evidence/{id}`, `/v1/analyses/{run_id}/ask?q=`.
-- **Evaluation:** `GET /v1/evaluations/summary`, `/v1/evaluations/benchmark`.
-
-JSON errors have an `error` code and a `message`.
-
-## Verify
+The **Evaluation** view runs five synthetic scenario checks, seven degraded-input checks, citation and retrieval checks, and a ten-run in-process latency benchmark with p50 and p95. The Python suite and browser smoke test cover the implementation separately:
 
 ```powershell
 python -m unittest discover -s tests -v
+# In another terminal, with the server running:
+node tests/ui_smoke.js
 ```
 
-The tests cover:
+GitHub Actions also runs Python tests, the UI smoke test and a hosted-mode container check on push. [Acceptance evidence](docs/acceptance.md) lists each blueprint case and what has actually been verified.
 
-- Agent concurrency and source integrity.
-- Recommendation sizing.
-- Filing retrieval and abstention.
-- Yahoo response parsing, including forming bars, nulls and provider failures. The tests use recorded payloads and never call the network.
-- Accounts, session expiry and per-user isolation.
-- A live-symbol analysis served from a seeded price cache.
-- The Infosys example: exact-quote verification, as-of filtering and per-account isolation.
-- Hosted-mode Host, Origin and cookie rules.
+On the held-out **synthetic** paraphrase set, cached hybrid search returned 100% Recall@3 versus 86% for keyword search, and abstained on all four unrelated questions. These checks establish retrieval behavior on the fixture set. They do **not** measure investment returns, performance on arbitrary real filings or calibrated confidence.
 
-With a server running, `node tests/ui_smoke.js` (or `CONTRA_BASE_URL=... node tests/ui_smoke.js`) starts a guest session and checks that every view renders without a runtime error.
+## API and repository map
 
-## Commercial relevance
+All `/v1` routes except authentication require a session cookie. Responses use JSON and errors include an `error` code and `message`.
 
-**Who it serves.** Retail investors who already hold a few stocks and want to know whether a new signal fits *their* portfolio. A second audience is the platforms that serve them: brokers, wealth apps and registered advisers.
+| Area | Representative endpoints |
+| --- | --- |
+| Sessions | `POST /v1/auth/guest`, `POST /v1/auth/signup`, `POST /v1/auth/login`, `GET /v1/auth/me` |
+| Research data | `GET /v1/stocks`, `POST /v1/securities`, `POST /v1/documents`, `GET /v1/evidence/{id}` |
+| Profiles | `GET /v1/profiles`, `PUT /v1/profiles/{id}`, `GET /v1/profiles/{id}/portfolio` |
+| Reports | `POST /v1/analyses`, `GET /v1/analyses/{run_id}`, `GET /v1/analyses/{run_id}/ask?q=` |
+| Evaluation | `GET /v1/evaluations/summary`, `GET /v1/evaluations/benchmark` |
 
-**How it could make money.**
-- **Freemium research tool for investors.** The free tier covers guest use and the demo scenarios. A paid tier adds more live symbols, filing ingestion for a watchlist, and an alert when a holding crosses the investor's own single-name or sector cap.
-- **API for fintech platforms and advisers.** A platform sends a symbol and a client profile, and gets back a sized action with cited reasons and a checksummed report. Advisers already have to record why they gave a recommendation. Each saved CONTRA report is that record: the frozen evidence, the profile revision and the rule that fired.
+| Path | Purpose |
+| --- | --- |
+| [`contra/`](contra/) | HTTP server, agents, synthesis, retrieval, flows, persistence and evaluation |
+| [`web/`](web/) | Responsive terminal, portfolio, evidence library and evaluation UI |
+| [`tests/`](tests/) | Python regressions and browser runtime smoke test |
+| [`data/fixtures/`](data/fixtures/) | Labeled scenarios and public example evidence |
+| [`docs/`](docs/) | Architecture, flow methodology, acceptance and submission notes |
+| [`scripts/`](scripts/) | Local starter and captioned demo recorder |
 
-**Why the unit cost stays low.**
-- Actions come from deterministic rules, so a run needs no model call.
-- The model only writes the short briefings. It is the cheapest suitable one (`gpt-4.1-nano`), its answers are cached by input, and every call is capped per account and per day.
-- Deterministic demo recording uses zero paid calls. Interactive model-enabled scenarios reuse matching cache entries; changed inputs can require new calls.
+## Deployment and limits
 
-**What is not yet validated.** No user research or pricing test has been run. Giving personalized advice to the public in India requires SEBI registration. CONTRA therefore stays a research and record-keeping tool. Any advice would come from the registered party using it.
+The repository includes a [`Dockerfile`](Dockerfile) and [`render.yaml`](render.yaml) Blueprint. Hosted mode uses `CONTRA_PUBLIC=1`, allowed-host checks, secure session cookies, origin checks, account-scoped data and process-local rate limits. Passwords use scrypt and only hashes of random session tokens are stored. There is no email verification or password reset.
 
-## Scope and limits
+The public Render instance uses temporary storage: accounts and saved runs can disappear after a restart or redeploy. Durable use needs persistent storage. The app is a **research prototype**, and its heuristic thresholds are not calibrated predictions or personal financial advice.
 
-- The live price source is unofficial. Uploaded filing text is not verified against the issuer. The Infosys excerpts are verified against SEC EDGAR by `python -m contra.public_filings`.
-- On numeric results releases, model briefings are often rejected because the model copies numbers. The card then shows the rule summary and the reason, which is intended.
-- Filing tone uses a word-list heuristic unless you label it. It is crude, and it is shown as such.
-- The thresholds are design choices, not calibrated predictors. No future-return accuracy is claimed.
-- SQLite and in-memory rate limits suit a single instance.
-- `python -m contra.import_data` still validates offline JSON snapshots for future provider work.
+---
 
-## Fourth signal: institutional flows
-
-Analysis now includes FII/FPI and DII net activity in INR crore, with a dated source drawer and explicit divergence when the two groups take opposite sides. Live runs use provisional combined-exchange NSE data; synthetic scenarios stay labeled synthetic. Missing or stale flows abstain. Saved comparisons reuse the original observation. See [methodology, official sources and historical-data limits](docs/institutional-flows.md).
+Built for [Wild Bugs PS04, VibeFinance](docs/wild-bugs-submission.md). Explore the [live terminal](https://contra-h0nw.onrender.com) or read the [full architecture](docs/architecture.md).

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Same ALPHA snapshot, different portfolio limits</title>
+  <desc id="desc">Grouped bars compare current ALPHA weight and single-stock cap. Conservative: 15% versus 10%. Growth: 15% versus 30%. Starter: 0% versus 15%. All values are synthetic fixture data.</desc>
+  <rect width="960" height="420" rx="22" fill="#151515"/>
+  <path d="M0 356 Q310 246 620 420 M525 0 Q754 75 960 15" fill="none" stroke="#4b2b1d" stroke-width="1" opacity=".55"/>
+  <text x="42" y="50" fill="#f7f2ed" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700">One snapshot. Three investors.</text>
+  <text x="42" y="77" fill="#bdb5af" font-family="Arial,Helvetica,sans-serif" font-size="14">ALPHA.NS synthetic scenario · share of portfolio (%)</text>
+  <rect x="644" y="40" width="13" height="13" rx="3" fill="#ff641b"/>
+  <text x="665" y="52" fill="#eee5df" font-family="Arial,Helvetica,sans-serif" font-size="13">Current weight</text>
+  <rect x="788" y="40" width="13" height="13" rx="3" fill="#b7b0a9"/>
+  <text x="809" y="52" fill="#eee5df" font-family="Arial,Helvetica,sans-serif" font-size="13">Profile cap</text>
+  <g stroke="#39332f" stroke-width="1">
+    <line x1="100" y1="112" x2="918" y2="112"/>
+    <line x1="100" y1="172" x2="918" y2="172"/>
+    <line x1="100" y1="232" x2="918" y2="232"/>
+    <line x1="100" y1="292" x2="918" y2="292"/>
+  </g>
+  <g fill="#a69e98" font-family="Arial,Helvetica,sans-serif" font-size="12" text-anchor="end">
+    <text x="87" y="116">30</text>
+    <text x="87" y="176">20</text>
+    <text x="87" y="236">10</text>
+    <text x="87" y="296">0</text>
+  </g>
+  <g font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" text-anchor="middle">
+    <rect x="188" y="202" width="54" height="90" rx="6" fill="#ff641b"/>
+    <rect x="250" y="232" width="54" height="60" rx="6" fill="#b7b0a9"/>
+    <text x="215" y="193" fill="#ff884e">15%</text>
+    <text x="277" y="223" fill="#ded7d0">10%</text>
+    <rect x="447" y="202" width="54" height="90" rx="6" fill="#ff641b"/>
+    <rect x="509" y="112" width="54" height="180" rx="6" fill="#b7b0a9"/>
+    <text x="474" y="193" fill="#ff884e">15%</text>
+    <text x="536" y="103" fill="#ded7d0">30%</text>
+    <rect x="706" y="289" width="54" height="3" rx="1.5" fill="#ff641b"/>
+    <rect x="768" y="202" width="54" height="90" rx="6" fill="#b7b0a9"/>
+    <text x="733" y="279" fill="#ff884e">0%</text>
+    <text x="795" y="193" fill="#ded7d0">15%</text>
+  </g>
+  <g fill="#f7f2ed" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" text-anchor="middle">
+    <text x="246" y="326">Conservative</text>
+    <text x="505" y="326">Growth</text>
+    <text x="764" y="326">Starter</text>
+  </g>
+  <g fill="#bdb5af" font-family="Arial,Helvetica,sans-serif" font-size="13" text-anchor="middle">
+    <text x="246" y="351">Reduce to cap</text>
+    <text x="505" y="351">Hold and review</text>
+    <text x="764" y="351">Do not open</text>
+  </g>
+  <text x="42" y="393" fill="#918781" font-family="Arial,Helvetica,sans-serif" font-size="12">Baseline demo profiles · weights and caps are fixture values, not investment targets</text>
+</svg>
