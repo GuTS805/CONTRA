@@ -130,3 +130,12 @@ main{width:min(1320px,100%);padding-top:34px}
 .doc-remove{position:absolute;top:10px;right:10px;background:#fff}
 @media(max-width:700px){.add-stock{grid-template-columns:1fr}.user-chip .user-name{display:none}}
 .evidence-list{align-content:start}
+
+/* Agent briefings */
+.brief{padding:20px;display:grid;gap:10px;align-content:start}
+.brief-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brief-head strong{font-size:13px}
+.brief p{margin:0;color:#2c4239;font-size:13px;line-height:1.55}
+.brief-tag{border-radius:999px;padding:4px 9px;font-size:9px;font-weight:800;letter-spacing:.6px;background:#eef1f4;color:#4c5e70;border:1px solid #d9e0e6;white-space:nowrap}
+.brief-tag.model{background:#e8f1ff;color:#24539a;border-color:#c5d8f5}
+.text-button.cite{font-size:11px;margin:0 2px}

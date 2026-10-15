@@ -14,7 +14,7 @@ import sys
 import traceback
 from urllib.parse import urlparse, unquote, parse_qs
 
-from . import auth, live, llm
+from . import auth, embeddings, live, llm
 from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
@@ -25,6 +25,7 @@ from .store import RunIntegrityError, RevisionConflict, baseline_profiles
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 WARM_CACHE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "model_cache.json"
+WARM_EMBEDDINGS = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "embedding_cache.json"
 LOOPBACK = {"127.0.0.1", "localhost"}
 MAX_SECURITIES = 20
 MAX_DOCUMENTS = 200
@@ -177,7 +178,8 @@ class Handler(BaseHTTPRequestHandler):
             db.execute("SELECT 1")
         return self._send(200, {"status": "ok", "version": "0.2", "fixture_loaded": True,
                                 "llm_enabled": llm_configured(), "llm_model": llm.model_status()["model"],
-                                "llm_usage": llm_usage()})
+                                "llm_usage": llm_usage(), "semantic_search": embeddings.available(),
+                                "embedding_usage": embeddings.usage()})
 
     # GET ----------------------------------------------------------------------
 
@@ -237,7 +239,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, report)
                 if len(parts) == 5 and parts[4] == "ask":
                     try:
-                        return self._send(200, ask_filings(report, params.get("q", [None])[0]))
+                        embed = (lambda texts: embeddings.embed(texts, owner)) if embeddings.available() else None
+                        return self._send(200, ask_filings(report, params.get("q", [None])[0], embed))
                     except LookupError as exc:
                         return self._error(409, "LEGACY_RUN", str(exc))
                 if len(parts) == 6 and parts[4] == "evidence":
@@ -446,7 +449,10 @@ class Handler(BaseHTTPRequestHandler):
 def install_model_cache() -> int:
     """Use the database for model answers and preload any shipped warm-up answers."""
     llm.persistent_cache = store.ModelCache()
+    embeddings.persistent_cache = store.ModelCache("embedding_cache")
     seeded = json.loads(WARM_CACHE.read_text(encoding="utf-8")) if WARM_CACHE.is_file() else {}
+    vectors = json.loads(WARM_EMBEDDINGS.read_text(encoding="utf-8")) if WARM_EMBEDDINGS.is_file() else {}
+    embeddings.preload(vectors.get("vectors", {}))
     return llm.preload(seeded.get("answers", {}))
 
 

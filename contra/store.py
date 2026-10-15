@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import sqlite3
+from threading import Lock
 
 from .fixtures import STOCKS
 from .core import digest
@@ -15,6 +16,7 @@ DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "contra.sqlite3"
 # Owner for in-process use without accounts (tests and command-line scripts).
 LOCAL_OWNER = "local"
 _MIGRATED: set[str] = set()
+_MIGRATION_LOCK = Lock()
 
 
 class RevisionConflict(Exception):
@@ -57,6 +59,7 @@ def _migrate(db: sqlite3.Connection) -> None:
             payload TEXT NOT NULL, PRIMARY KEY (owner_id, id));
         CREATE TABLE IF NOT EXISTS market_bars (ticker TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS llm_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS embedding_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL);
     """)
     columns = {row[1] for row in db.execute("PRAGMA table_info(runs)")}
     if "owner_id" not in columns:
@@ -73,9 +76,12 @@ def connect(path: str | Path | None = None) -> sqlite3.Connection:
     db.row_factory = sqlite3.Row
     key = str(target.resolve())
     if key not in _MIGRATED:
-        _migrate(db)
-        seed_profiles(db, LOCAL_OWNER)
-        _MIGRATED.add(key)
+        # Concurrent first connections (for example three agent threads) must not migrate twice at once.
+        with _MIGRATION_LOCK:
+            if key not in _MIGRATED:
+                _migrate(db)
+                seed_profiles(db, LOCAL_OWNER)
+                _MIGRATED.add(key)
     return db
 
 
@@ -201,12 +207,17 @@ def cache_bars(db, ticker, bars):
 
 
 class ModelCache:
-    """Durable store for validated model answers, keyed by a hash of model, prompt and input facts."""
+    """Durable key/value store for model answers or embedding vectors, keyed by a content hash."""
+
+    def __init__(self, table="llm_cache"):
+        if table not in ("llm_cache", "embedding_cache"):
+            raise ValueError("unknown cache table")
+        self.table = table
 
     def get(self, key):
         db = connect()
         try:
-            row = db.execute("SELECT payload FROM llm_cache WHERE key=?", (key,)).fetchone()
+            row = db.execute(f"SELECT payload FROM {self.table} WHERE key=?", (key,)).fetchone()
             return json.loads(row[0]) if row else None
         finally:
             db.close()
@@ -215,7 +226,7 @@ class ModelCache:
         db = connect()
         try:
             with db:
-                db.execute("INSERT OR REPLACE INTO llm_cache(key,payload,created_at) VALUES (?,?,?)",
+                db.execute(f"INSERT OR REPLACE INTO {self.table}(key,payload,created_at) VALUES (?,?,?)",
                            (key, json.dumps(answer), now_iso()))
         finally:
             db.close()
@@ -223,7 +234,7 @@ class ModelCache:
     def all(self):
         db = connect()
         try:
-            return {row[0]: json.loads(row[1]) for row in db.execute("SELECT key, payload FROM llm_cache")}
+            return {row[0]: json.loads(row[1]) for row in db.execute(f"SELECT key, payload FROM {self.table}")}
         finally:
             db.close()
 

@@ -1,44 +1,23 @@
 {
  "answers": {
-  "11d6fb442b3d67dd38f5aea8b42b7420b6718e7dff0c9e2ca832f749ab551b8a": {
-   "answered_at": "2026-10-15T02:21:12+00:00",
-   "cache_key": "11d6fb442b3d67dd38f5aea8b42b7420b6718e7dff0c9e2ca832f749ab551b8a",
+  "0240c1d89e1c4311934cc2762caf68d7e8532cbb8d0eb1d4bf8d1517d811f680": {
+   "answered_at": "2026-10-15T02:51:51+00:00",
+   "cache_key": "0240c1d89e1c4311934cc2762caf68d7e8532cbb8d0eb1d4bf8d1517d811f680",
    "cached": false,
    "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_f2a0df7b27134e13892c5fe6474029d5",
+   "model_request_id": "req_6bca2ef798d24bfa86dddb594e00684c",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 322,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 339
-   }
-  },
-  "2388da505e1faf01927453ed852da210e7e8af1a1490bb121854552f53c30c4a": {
-   "answered_at": "2026-10-15T02:21:09+00:00",
-   "cache_key": "2388da505e1faf01927453ed852da210e7e8af1a1490bb121854552f53c30c4a",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_1183f3520bf8427291df75bb2c2f244e",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
    "supporting_ids": [
     "demo_conservative"
    ],
    "token_usage": {
-    "input_tokens": 329,
+    "input_tokens": 325,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
@@ -47,252 +26,85 @@
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 347
+    "total_tokens": 343
    }
   },
-  "3ca76cc6228e3bd1f288b44f8dc34299833e3299b4490a3da097c604b0507ef7": {
-   "answered_at": "2026-10-15T02:21:07+00:00",
-   "cache_key": "3ca76cc6228e3bd1f288b44f8dc34299833e3299b4490a3da097c604b0507ef7",
+  "0f69b19fdd6ebd8df5fce4e006ad9f394fd2d67f141d3f50270de3493df6ef15": {
+   "answered_at": "2026-10-15T02:51:50+00:00",
+   "cache_key": "0f69b19fdd6ebd8df5fce4e006ad9f394fd2d67f141d3f50270de3493df6ef15",
    "cached": false,
-   "focus": "DIRECTION",
-   "model_request_id": "req_38a2d87196a04034b8d190c0ad658508",
+   "focus": "POSITIVE_FACTS",
+   "model_request_id": "req_f01d75750bb24d6db60e5e1fd3b97569",
    "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "focus-selection-1.1",
+   "note": "Highlights favorable facts from the cited excerpts.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The company has seen improvements in its operating margin and revenue after starting new contracts. Cash flow from operations increased, and its net debt decreased. Additionally, it reported new long-term supply contracts that generate revenue. [E-GAMMA-01] [E-GAMMA-03] [E-GAMMA-02]"
+   },
    "supporting_ids": [
-    "BAR-BETA.NS-2026-09-15",
-    "BAR-BETA.NS-2026-10-13"
+    "E-GAMMA-01",
+    "E-GAMMA-03",
+    "E-GAMMA-02"
    ],
    "token_usage": {
-    "input_tokens": 316,
+    "input_tokens": 444,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 38,
+    "output_tokens": 85,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 354
+    "total_tokens": 529
    }
   },
-  "3db6908b568221419f2216335202130b60398674e03a346afa099715673bf274": {
-   "answered_at": "2026-10-15T02:21:14+00:00",
-   "cache_key": "3db6908b568221419f2216335202130b60398674e03a346afa099715673bf274",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_6c8bf8a976904317a48a3705b955683c",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 322,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 339
-   }
-  },
-  "49bef49a56bee2875b38a7bf13a184b5df98633aea47d0f70477ed423ab944c5": {
-   "answered_at": "2026-10-15T02:21:11+00:00",
-   "cache_key": "49bef49a56bee2875b38a7bf13a184b5df98633aea47d0f70477ed423ab944c5",
+  "14a1022609d878ed3c10c30c95c6a9c35952bdcdf4b4cf7f9dde03e0bbebd459": {
+   "answered_at": "2026-10-15T02:51:51+00:00",
+   "cache_key": "14a1022609d878ed3c10c30c95c6a9c35952bdcdf4b4cf7f9dde03e0bbebd459",
    "cached": false,
    "focus": "DIRECTION",
-   "model_request_id": "req_5907e8d75225447183360079462571ec",
+   "model_request_id": "req_b2852d5f9ed04ce5b1554c01927165d8",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The assessment indicates a bearish trend based on recent data. The momentum return is negative, and recent trading volume has been slightly higher than usual, suggesting declining market sentiment. [BAR-DELTA.NS-2026-09-15] [BAR-DELTA.NS-2026-10-13]"
+   },
    "supporting_ids": [
     "BAR-DELTA.NS-2026-09-15",
     "BAR-DELTA.NS-2026-10-13"
    ],
    "token_usage": {
-    "input_tokens": 323,
+    "input_tokens": 485,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 40,
+    "output_tokens": 76,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 363
+    "total_tokens": 561
    }
   },
-  "65eb90dda73e2be5f13294f08d4371735c9928df033410763c274f768ec8d9c0": {
-   "answered_at": "2026-10-15T02:21:13+00:00",
-   "cache_key": "65eb90dda73e2be5f13294f08d4371735c9928df033410763c274f768ec8d9c0",
+  "32fe6836de1ac9e9c1b9930eaffebe80fb2b58d5650fedde6305d052dff8dad5": {
+   "answered_at": "2026-10-15T02:51:53+00:00",
+   "cache_key": "32fe6836de1ac9e9c1b9930eaffebe80fb2b58d5650fedde6305d052dff8dad5",
    "cached": false,
    "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_5ffc84fae8994fc089876dc458fc6492",
+   "model_request_id": "req_ecb1e951d3bf45df97261a4cde77b7b2",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
    "supporting_ids": [
     "demo_growth"
-   ],
-   "token_usage": {
-    "input_tokens": 322,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 17,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 339
-   }
-  },
-  "7c477fb8d46816e9d4ea1dcd3f84191932c79f4c7303ce8724614cd58a7aa47f": {
-   "answered_at": "2026-10-15T02:21:10+00:00",
-   "cache_key": "7c477fb8d46816e9d4ea1dcd3f84191932c79f4c7303ce8724614cd58a7aa47f",
-   "cached": false,
-   "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_570291f5922341359fcc4ac7ad227100",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "demo_conservative"
-   ],
-   "token_usage": {
-    "input_tokens": 329,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 18,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 347
-   }
-  },
-  "7d141372f7af5c076f1f49d6be5b1c61618f80b5e4badb49e8ab153f3d1fca9b": {
-   "answered_at": "2026-10-15T02:21:06+00:00",
-   "cache_key": "7d141372f7af5c076f1f49d6be5b1c61618f80b5e4badb49e8ab153f3d1fca9b",
-   "cached": false,
-   "focus": "SINGLE_NAME_LIMIT",
-   "model_request_id": "req_b1f53d698d9749a6b1500e0632383ae1",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the configured single-name exposure breach.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "demo_conservative"
-   ],
-   "token_usage": {
-    "input_tokens": 328,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 18,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 346
-   }
-  },
-  "84d70b0bd2b227b0ec37a072ae3cc5b0bb3e1e2016450767e1a7c6d6f8c470d5": {
-   "answered_at": "2026-10-15T02:21:07+00:00",
-   "cache_key": "84d70b0bd2b227b0ec37a072ae3cc5b0bb3e1e2016450767e1a7c6d6f8c470d5",
-   "cached": false,
-   "focus": "SINGLE_NAME_LIMIT",
-   "model_request_id": "req_d7843c4791bb423a9c3d7a18e0a58060",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the configured single-name exposure breach.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "demo_conservative"
-   ],
-   "token_usage": {
-    "input_tokens": 328,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 18,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 346
-   }
-  },
-  "906091664b03f99fcc6f3672460d510932091aea2dd52514e33b32048ace514e": {
-   "answered_at": "2026-10-15T02:21:07+00:00",
-   "cache_key": "906091664b03f99fcc6f3672460d510932091aea2dd52514e33b32048ace514e",
-   "cached": false,
-   "focus": "MIXED_FACTS",
-   "model_request_id": "req_9943079570b64dada5a0c01f701659f0",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights mixed facts from the cited excerpts.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "E-BETA-01",
-    "E-BETA-04",
-    "E-BETA-03"
-   ],
-   "token_usage": {
-    "input_tokens": 306,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 33,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 339
-   }
-  },
-  "9f5aa17a07ee9660c5cc2b40d13b9823f9e3525f43b6534a4fed5386c3117ce5": {
-   "answered_at": "2026-10-15T02:21:09+00:00",
-   "cache_key": "9f5aa17a07ee9660c5cc2b40d13b9823f9e3525f43b6534a4fed5386c3117ce5",
-   "cached": false,
-   "focus": "DIRECTION",
-   "model_request_id": "req_35bfa4c140b046c6bfdd42ebb87d37df",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "BAR-GAMMA.NS-2026-09-15",
-    "BAR-GAMMA.NS-2026-10-13"
-   ],
-   "token_usage": {
-    "input_tokens": 323,
-    "input_tokens_details": {
-     "cache_write_tokens": 0,
-     "cached_tokens": 0
-    },
-    "output_tokens": 40,
-    "output_tokens_details": {
-     "reasoning_tokens": 0
-    },
-    "total_tokens": 363
-   }
-  },
-  "be14bdc185ebf1108729c83bea609daed131534e5ce20f284900dd978b0dd196": {
-   "answered_at": "2026-10-15T02:21:08+00:00",
-   "cache_key": "be14bdc185ebf1108729c83bea609daed131534e5ce20f284900dd978b0dd196",
-   "cached": false,
-   "focus": "POSITIVE_FACTS",
-   "model_request_id": "req_25cb5e506ba84c02a9b06d47c45662c9",
-   "model_version": "gpt-4.1-nano-2025-04-14",
-   "note": "Highlights favorable facts from the cited excerpts.",
-   "prompt_version": "focus-selection-1.1",
-   "supporting_ids": [
-    "E-GAMMA-01",
-    "E-GAMMA-03",
-    "E-GAMMA-02"
    ],
    "token_usage": {
     "input_tokens": 318,
@@ -300,27 +112,89 @@
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 40,
+    "output_tokens": 17,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 358
+    "total_tokens": 335
    }
   },
-  "d2bda561e40856a2f095dd86b944a15f46e5216d1a97406f60fe34932f26c4f3": {
-   "answered_at": "2026-10-15T02:21:15+00:00",
-   "cache_key": "d2bda561e40856a2f095dd86b944a15f46e5216d1a97406f60fe34932f26c4f3",
+  "3c29229ec45b5919104d588372049e0ea71f2c09fe40946f3185a0c841254bb2": {
+   "answered_at": "2026-10-15T02:51:48+00:00",
+   "cache_key": "3c29229ec45b5919104d588372049e0ea71f2c09fe40946f3185a0c841254bb2",
+   "cached": false,
+   "focus": "SINGLE_NAME_LIMIT",
+   "model_request_id": "req_ffbd3e09fb8247f59efe82f059242d63",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights the configured single-name exposure breach.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_conservative"
+   ],
+   "token_usage": {
+    "input_tokens": 324,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 342
+   }
+  },
+  "42a8a22ff4ac471ecfabe44b261b134ab12f4ea785b56952cc39c93b8c7c8785": {
+   "answered_at": "2026-10-15T02:51:46+00:00",
+   "cache_key": "42a8a22ff4ac471ecfabe44b261b134ab12f4ea785b56952cc39c93b8c7c8785",
+   "cached": false,
+   "focus": "SINGLE_NAME_LIMIT",
+   "model_request_id": "req_fe751f8c12fd49bf9c46ae30d54de18e",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights the configured single-name exposure breach.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_conservative"
+   ],
+   "token_usage": {
+    "input_tokens": 324,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 342
+   }
+  },
+  "491cf9f25f27ce893c8eb5da4b0a65c4845dc95148bea9d012e95efd9d4f0530": {
+   "answered_at": "2026-10-15T02:51:55+00:00",
+   "cache_key": "491cf9f25f27ce893c8eb5da4b0a65c4845dc95148bea9d012e95efd9d4f0530",
    "cached": false,
    "focus": "WITHIN_LIMITS",
-   "model_request_id": "req_bf4bc3e6f1ee45deaceee22ea4478788",
+   "model_request_id": "req_cc548b6aece24b47ae86075bcd0e556d",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights that the evaluated exposure is within configured limits.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
    "supporting_ids": [
     "demo_growth"
    ],
    "token_usage": {
-    "input_tokens": 322,
+    "input_tokens": 318,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
@@ -329,62 +203,248 @@
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 339
+    "total_tokens": 335
    }
   },
-  "da10845b80ad9db88ae5d02dd73436f32d0388090900a2c71612bbff0b6e19f9": {
-   "answered_at": "2026-10-15T02:21:06+00:00",
-   "cache_key": "da10845b80ad9db88ae5d02dd73436f32d0388090900a2c71612bbff0b6e19f9",
+  "56a5da07cdc3e7740616bbc400c8c7f6cd6a11aeb78da99fc15d5d54b3e04402": {
+   "answered_at": "2026-10-15T02:51:48+00:00",
+   "cache_key": "56a5da07cdc3e7740616bbc400c8c7f6cd6a11aeb78da99fc15d5d54b3e04402",
    "cached": false,
    "focus": "NEGATIVE_FACTS",
-   "model_request_id": "req_4bc6592fd67d431cbf14bc30ee9c4b5d",
+   "model_request_id": "req_837a68d048284999a39929e8943e854d",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights unfavorable facts from the cited excerpts.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The company's operating margin has decreased because costs for components increased, even though revenue was stronger. Additionally, higher procurement costs and delays in customer deliveries were reported, which might impact the company's performance. [E-ALPHA-01] [E-ALPHA-03] [E-ALPHA-02]"
+   },
    "supporting_ids": [
     "E-ALPHA-01",
     "E-ALPHA-02"
    ],
    "token_usage": {
-    "input_tokens": 323,
+    "input_tokens": 449,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 28,
+    "output_tokens": 69,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 351
+    "total_tokens": 518
    }
   },
-  "f7fb3350b05ebb88c05bca2a3b347920228fba322c8aee45ad1aec9d31baebb8": {
-   "answered_at": "2026-10-15T02:21:06+00:00",
-   "cache_key": "f7fb3350b05ebb88c05bca2a3b347920228fba322c8aee45ad1aec9d31baebb8",
+  "618e5e6e61b3b412521516c15777b38e0e89995abdec3ffe5bfd0bf06eec01ef": {
+   "answered_at": "2026-10-15T02:51:49+00:00",
+   "cache_key": "618e5e6e61b3b412521516c15777b38e0e89995abdec3ffe5bfd0bf06eec01ef",
+   "cached": false,
+   "focus": "MIXED_FACTS",
+   "model_request_id": "req_2f256528973a478b82f9c4dbfc9d4fe5",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights mixed facts from the cited excerpts.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "Revenue remained steady and operating costs stayed consistent. Management observed varied demand across regions and cash balances remained stable. Orders saw improvement in one area but declined in another. [E-BETA-01] [E-BETA-04] [E-BETA-03]"
+   },
+   "supporting_ids": [
+    "E-BETA-01",
+    "E-BETA-04",
+    "E-BETA-03"
+   ],
+   "token_usage": {
+    "input_tokens": 432,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 68,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 500
+   }
+  },
+  "795ab33489e29b058db49ff745ba9d4c563b05fd816c2651e6b501a022d585a9": {
+   "answered_at": "2026-10-15T02:51:50+00:00",
+   "cache_key": "795ab33489e29b058db49ff745ba9d4c563b05fd816c2651e6b501a022d585a9",
    "cached": false,
    "focus": "DIRECTION",
-   "model_request_id": "req_a33612cc570d423dbf43b6ef833188cf",
+   "model_request_id": "req_f1d1309699974490a366ec10b93a2822",
    "model_version": "gpt-4.1-nano-2025-04-14",
    "note": "Highlights the validated 20-session price direction.",
-   "prompt_version": "focus-selection-1.1",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The data suggests a bullish trend based on recent momentum and increased trading volume. Momentum return shows a positive shift, and the relative volume indicates higher than usual trading activity. [BAR-GAMMA.NS-2026-09-15] [BAR-GAMMA.NS-2026-10-13]"
+   },
+   "supporting_ids": [
+    "BAR-GAMMA.NS-2026-09-15",
+    "BAR-GAMMA.NS-2026-10-13"
+   ],
+   "token_usage": {
+    "input_tokens": 485,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 76,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 561
+   }
+  },
+  "89d206d38567ae47c7cc8b8c26555d87c2d2b855777b87c4e1353feec2ba89cf": {
+   "answered_at": "2026-10-15T02:51:46+00:00",
+   "cache_key": "89d206d38567ae47c7cc8b8c26555d87c2d2b855777b87c4e1353feec2ba89cf",
+   "cached": false,
+   "focus": "PARTICIPATION",
+   "model_request_id": "req_104f8a5ce01f49aeb92ab44884374086",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights volume participation alongside the price signal.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The facts indicate that the stock has positive momentum and increased trading activity. The momentum is above the specified threshold, and the volume ratio suggests elevated trading activity, which supports a bullish assessment. [BAR-ALPHA.NS-2026-09-15] [BAR-ALPHA.NS-2026-10-13]"
+   },
    "supporting_ids": [
     "BAR-ALPHA.NS-2026-09-15",
     "BAR-ALPHA.NS-2026-10-13"
    ],
    "token_usage": {
-    "input_tokens": 323,
+    "input_tokens": 485,
     "input_tokens_details": {
      "cache_write_tokens": 0,
      "cached_tokens": 0
     },
-    "output_tokens": 40,
+    "output_tokens": 87,
     "output_tokens_details": {
      "reasoning_tokens": 0
     },
-    "total_tokens": 363
+    "total_tokens": 572
+   }
+  },
+  "9f36fa69d7a3f5f01c3a40a4d10b1b3501e58c56cb9f07ba87316f46fb05a6ce": {
+   "answered_at": "2026-10-15T02:51:54+00:00",
+   "cache_key": "9f36fa69d7a3f5f01c3a40a4d10b1b3501e58c56cb9f07ba87316f46fb05a6ce",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_787069c3904c47d4bb4525363200bfa7",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
+  },
+  "a10f7898c6262a425f978656f5e2cacfedc86a2784cf031663cda562b1eaed46": {
+   "answered_at": "2026-10-15T02:51:52+00:00",
+   "cache_key": "a10f7898c6262a425f978656f5e2cacfedc86a2784cf031663cda562b1eaed46",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_aac20ecfa7d04af888bf9554a503906d",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_growth"
+   ],
+   "token_usage": {
+    "input_tokens": 318,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 335
+   }
+  },
+  "c38c8710b32679e756e41e8980d1cdf17e77bcf8dffb8eba13fda6a115023cce": {
+   "answered_at": "2026-10-15T02:51:49+00:00",
+   "cache_key": "c38c8710b32679e756e41e8980d1cdf17e77bcf8dffb8eba13fda6a115023cce",
+   "cached": false,
+   "focus": "PARTICIPATION",
+   "model_request_id": "req_408976fc877c42c6aac309d120cfaa2b",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights volume participation alongside the price signal.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "VERIFIED",
+    "text": "The facts indicate a small positive change in recent returns and a slightly lower than usual trading volume. These details suggest that trading activity has been relatively subdued, with no strong directional movement. [BAR-BETA.NS-2026-09-15] [BAR-BETA.NS-2026-10-13]"
+   },
+   "supporting_ids": [
+    "BAR-BETA.NS-2026-09-15",
+    "BAR-BETA.NS-2026-10-13"
+   ],
+   "token_usage": {
+    "input_tokens": 478,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 84,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 562
+   }
+  },
+  "e72d03ebb07bc4ed794b4bcc5a84eed22a8d962ba3ebad33e917babfe82585e8": {
+   "answered_at": "2026-10-15T02:51:50+00:00",
+   "cache_key": "e72d03ebb07bc4ed794b4bcc5a84eed22a8d962ba3ebad33e917babfe82585e8",
+   "cached": false,
+   "focus": "WITHIN_LIMITS",
+   "model_request_id": "req_6f9064fe88484cf597a97217e2315730",
+   "model_version": "gpt-4.1-nano-2025-04-14",
+   "note": "Highlights that the evaluated exposure is within configured limits.",
+   "prompt_version": "briefing-1.6",
+   "summary": {
+    "status": "NOT_REQUESTED",
+    "text": null
+   },
+   "supporting_ids": [
+    "demo_conservative"
+   ],
+   "token_usage": {
+    "input_tokens": 325,
+    "input_tokens_details": {
+     "cache_write_tokens": 0,
+     "cached_tokens": 0
+    },
+    "output_tokens": 18,
+    "output_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "total_tokens": 343
    }
   }
  },
  "model": "gpt-4.1-nano-2025-04-14",
- "prompt_version": "focus-selection-1.1"
+ "prompt_version": "briefing-1.6"
 }

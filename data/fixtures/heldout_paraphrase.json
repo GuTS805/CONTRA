@@ -1,0 +1,19 @@
+{
+  "dataset_id": "contra_synthetic_v1",
+  "description": "Paraphrased questions that share few or no words with the target excerpt, plus unrelated questions that should return nothing. Written after the semantic threshold was fixed and not used to choose it.",
+  "relevant": [
+    {"ticker": "ALPHA.NS", "question": "Are input costs hurting earnings?", "expected_ids": ["E-ALPHA-01"]},
+    {"ticker": "ALPHA.NS", "question": "What did management say about deliveries running late?", "expected_ids": ["E-ALPHA-02"]},
+    {"ticker": "ALPHA.NS", "question": "Was a long-term customer agreement extended?", "expected_ids": ["E-ALPHA-03"]},
+    {"ticker": "GAMMA.NS", "question": "Did the business generate more cash from operations?", "expected_ids": ["E-GAMMA-03"]},
+    {"ticker": "GAMMA.NS", "question": "Were new supply agreements signed?", "expected_ids": ["E-GAMMA-02"]},
+    {"ticker": "BETA.NS", "question": "Is spending on capital projects changing?", "expected_ids": ["E-BETA-02"]},
+    {"ticker": "BETA.NS", "question": "Are sales flat?", "expected_ids": ["E-BETA-01"]}
+  ],
+  "unrelated": [
+    {"ticker": "ALPHA.NS", "question": "Who is the brand ambassador?"},
+    {"ticker": "ALPHA.NS", "question": "How tall is Mount Everest?"},
+    {"ticker": "GAMMA.NS", "question": "What will the dividend yield be in 2030?"},
+    {"ticker": "BETA.NS", "question": "Recommend a good restaurant nearby."}
+  ]
+}

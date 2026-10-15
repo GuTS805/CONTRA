@@ -55,6 +55,11 @@ The implementation version saved with new runs is `rules-1.2` (`rules-1.1` runs 
 
 Each report records actual wall latency, per-agent latency, agent interval overlap, source citation validity, citation count and portfolio concentration. The Evaluation endpoint executes five synthetic scenario checks against immutable baseline profiles and reports Recall@3 on the three queries in `data/fixtures/heldout_retrieval.json`. User profile edits do not change the test oracle. A separate endpoint runs a ten-execution fixed-snapshot latency benchmark. These measure implementation behavior; there are no future-return labels or profitability statistics.
 
+## Model briefings and semantic search
+
+- `llm.reason` asks for a focus, supporting IDs and, for Market and Research, a short summary. The schema offers only the focus values and IDs that validation accepts. `verify_summary` rejects text that cites other sources, contains a digit, uses advice, prediction, judgment or portfolio-limit words, or contradicts the agent's direction (negation-aware). A rejected summary is kept only for audit as `rejected_text`. The report shows the rule-based summary from `core.rule_summary` instead. Prompt version `briefing-1.6` is part of the cache key.
+- `core.hybrid_rank` scores eligible excerpts with TF-IDF and, when available, cosine similarity of `text-embedding-3-small` vectors (`contra/embeddings.py`, 256 dimensions, cached by text hash, with daily limits). It keeps passages with a shared term or similarity of at least 0.38, ranked by 0.7 × similarity + 0.3 × TF-IDF. The research agent's tone signal still uses TF-IDF alone, so its numbers stay reproducible without a network.
+
 ## Accounts and live data
 
 - `contra/auth.py` hashes passwords with scrypt and issues random session tokens. Only SHA-256 hashes of the tokens are stored, and the cookie is HttpOnly and SameSite=Lax (Secure in hosted mode). Profiles, runs, live symbols and filings are keyed by owner, and every query filters by it.

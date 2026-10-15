@@ -157,35 +157,80 @@ def _age_days(snapshot: dict, doc: dict) -> int:
     return (date.fromisoformat(snapshot["as_of"]) - date.fromisoformat(doc["published_at"])).days
 
 
-def retrieve(snapshot: dict, question: str = RESEARCH_QUERY, limit: int = 3,
-             max_age_days: int | None = None) -> list[dict]:
-    """Issuer and date gated TF-IDF cosine search over exact fixture passages."""
-    corpus = [doc for doc in snapshot["documents"]
-              if max_age_days is None or _age_days(snapshot, doc) <= max_age_days]
-    if not corpus:
-        return []
+def _lexical_scores(corpus: list[dict], question: str) -> list[float]:
+    """TF-IDF cosine similarity of each excerpt to the question (0 when no term is shared)."""
     counts = [Counter(_terms(doc["excerpt"])) for doc in corpus]
     query = Counter(_terms(question))
-    if not query:
-        return []
+    if not corpus or not query:
+        return [0.0] * len(corpus)
     df = Counter(word for row in counts for word in row)
     n = len(corpus)
     def weight(word: str, frequency: int) -> float:
         return (1 + math.log(frequency)) * (math.log((n + 1) / (df[word] + 1)) + 1)
     query_vector = {word: weight(word, frequency) for word, frequency in query.items()}
     query_norm = math.sqrt(sum(value * value for value in query_vector.values()))
-    ranked = []
-    for doc, row in zip(corpus, counts):
+    scores = []
+    for row in counts:
         vector = {word: weight(word, frequency) for word, frequency in row.items()}
         norm = math.sqrt(sum(value * value for value in vector.values()))
         dot = sum(query_vector.get(word, 0) * value for word, value in vector.items())
-        score = dot / (norm * query_norm) if norm and query_norm else 0
-        if score > 0:
-            ranked.append({**doc, "retrieval_score": round(score, 5)})
+        scores.append(dot / (norm * query_norm) if norm and query_norm else 0.0)
+    return scores
+
+
+def retrieve(snapshot: dict, question: str = RESEARCH_QUERY, limit: int = 3,
+             max_age_days: int | None = None) -> list[dict]:
+    """Issuer and date gated TF-IDF cosine search over exact fixture passages."""
+    corpus = [doc for doc in snapshot["documents"]
+              if max_age_days is None or _age_days(snapshot, doc) <= max_age_days]
+    ranked = [{**doc, "retrieval_score": round(score, 5)}
+              for doc, score in zip(corpus, _lexical_scores(corpus, question)) if score > 0]
     return sorted(ranked, key=lambda d: (d["retrieval_score"], d["published_at"]), reverse=True)[:limit]
 
 
-def ask_filings(report: dict, question) -> dict:
+# Calibrated on fixture filings: relevant questions scored 0.43-0.67 against their best
+# excerpt, unrelated ones 0.04-0.32 (text-embedding-3-small, 256 dimensions).
+SEMANTIC_THRESHOLD = 0.38
+SEMANTIC_WEIGHT = 0.7
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    norm = math.sqrt(sum(x * x for x in a) * sum(y * y for y in b))
+    return sum(x * y for x, y in zip(a, b)) / norm if norm else 0.0
+
+
+def hybrid_rank(documents: list[dict], question: str, embed=None, limit: int = 3) -> tuple[list[dict], dict]:
+    """Rank excerpts by TF-IDF and, when `embed` is given, embedding similarity.
+
+    A passage qualifies when it shares a meaningful term with the question or its
+    embedding similarity reaches SEMANTIC_THRESHOLD. `embed(texts)` returns one vector
+    per text or raises; on failure the ranking falls back to TF-IDF alone.
+    """
+    lexical = _lexical_scores(documents, question)
+    semantic, status = None, "OFF"
+    if embed is not None and documents:
+        try:
+            vectors = embed([question] + [doc["excerpt"] for doc in documents])
+            semantic = [_cosine(vectors[0], vector) for vector in vectors[1:]]
+            status = "OK"
+        except Exception as exc:
+            status = f"UNAVAILABLE ({exc})" if str(exc) else f"UNAVAILABLE ({type(exc).__name__})"
+    ranked = []
+    for index, doc in enumerate(documents):
+        lex = lexical[index]
+        sem = semantic[index] if semantic is not None else None
+        if lex <= 0 and (sem is None or sem < SEMANTIC_THRESHOLD):
+            continue
+        score = lex if sem is None else SEMANTIC_WEIGHT * max(sem, 0) + (1 - SEMANTIC_WEIGHT) * lex
+        ranked.append({**doc, "retrieval_score": round(score, 5), "lexical_score": round(lex, 5),
+                       "semantic_score": None if sem is None else round(sem, 5)})
+    ranked.sort(key=lambda d: (d["retrieval_score"], d["published_at"]), reverse=True)
+    method = ("hybrid: text-embedding-3-small similarity (threshold "
+              f"{SEMANTIC_THRESHOLD}) + tfidf-1.0" if semantic is not None else "tfidf-1.0 lexical")
+    return ranked[:limit], {"semantic_status": status, "method": method}
+
+
+def ask_filings(report: dict, question, embed=None) -> dict:
     """Extractive answer: ranked exact passages from the run's frozen, as-of eligible filings.
 
     No text is generated; an unanswerable question returns no passages.
@@ -196,13 +241,15 @@ def ask_filings(report: dict, question) -> dict:
     if documents is None:
         raise LookupError("This saved run predates frozen document storage")
     snapshot = {"as_of": report["as_of"], "documents": documents}
-    terms = _terms(question)
-    passages = [{key: doc[key] for key in ("id", "document_id", "title", "published_at", "excerpt",
-                                          "source_hash", "retrieval_score")} | {"age_days": _age_days(snapshot, doc)}
-                for doc in retrieve(snapshot, question, limit=3)] if terms else []
+    question = question.strip()
+    ranked, info = hybrid_rank(documents, question, embed)
+    passages = [{key: doc[key] for key in ("id", "document_id", "title", "published_at", "excerpt", "source_hash",
+                                          "retrieval_score", "lexical_score", "semantic_score")}
+                | {"age_days": _age_days(snapshot, doc)} for doc in ranked]
     return {"run_id": report["run_id"], "ticker": report["ticker"], "as_of": report["as_of"],
-            "question": question.strip(), "query_terms": terms, "passages": passages,
-            "searched_document_count": len(documents), "method": "tfidf-1.0 extractive retrieval",
+            "question": question, "query_terms": _terms(question), "passages": passages,
+            "searched_document_count": len(documents), "method": info["method"],
+            "semantic_status": info["semantic_status"],
             "answer_status": "ANSWERED_FROM_SOURCES" if passages else "NO_SUPPORTING_PASSAGE",
             "note": "Passages are exact stored text from filings published by the as-of date; nothing is generated."}
 
@@ -356,6 +403,54 @@ def synthesize(agents: dict, signals: dict) -> dict:
     return {"state": state, "reasons": reasons, "market_research_disagreement": conflict,
             "suitability_breach": breach, "evidence_completeness": round(sum(available) / 3, 3),
             "next_step": "Inspect the cited filings and portfolio limits before forming a view."}
+
+
+def _cite(ids: list[str]) -> str:
+    return " ".join(f"[{source}]" for source in ids)
+
+
+def rule_summary(name: str, agent: dict, ticker: str) -> str:
+    """Plain-language summary built only from an agent's validated facts."""
+    facts = {fact["key"]: fact for fact in agent["facts"]}
+    if name == "market":
+        momentum, volume = facts.get("momentum_return"), facts.get("relative_volume")
+        if agent["status"] not in ("OK", "PARTIAL") or not momentum or momentum["value"] is None:
+            return "There are fewer than 21 valid daily bars, so no market view is formed."
+        text = f"The closing price moved {momentum['value']:+.1%} over 20 trading sessions, a {agent['assessment'].lower()} reading"
+        if volume and volume["value"] is not None:
+            text += f", and the latest volume is {volume['value']:.2f}x the median of the prior 20 sessions"
+        return f"{text}. {_cite(agent['evidence_ids'][:2])}"
+    if name == "research":
+        if agent["status"] not in ("OK", "PARTIAL") or not agent["facts"]:
+            return "No filing excerpt was eligible at the as-of date, so the research view abstains."
+        tone = {"BULLISH": "positive", "BEARISH": "negative", "MIXED": "mixed"}.get(agent["assessment"], "unclear")
+        lead = agent["facts"][0]
+        excerpt = lead["value"] if len(lead["value"]) <= 160 else lead["value"][:157].rstrip() + "..."
+        count = len(agent["facts"])
+        return (f"The {count} cited filing excerpt{'s are' if count != 1 else ' is'} {tone} on balance. "
+                f"The most relevant says: “{excerpt}” {_cite(lead['source_ids'])}")
+    if agent["status"] not in ("OK", "PARTIAL") or agent.get("position_weight") is None:
+        return "The saved portfolio cannot be valued, so suitability is not assessed."
+    single = "above" if agent.get("single_asset_breach") else "within"
+    sector = "above" if agent.get("sector_breach") else "within"
+    return (f"{ticker} is {agent['position_weight']:.0%} of this portfolio, {single} its {agent['single_asset_cap']:.0%} "
+            f"single-name cap; {agent['sector']} is {agent['sector_weight']:.0%}, {sector} its "
+            f"{agent['sector_cap']:.0%} sector cap. {_cite(agent['evidence_ids'][:1])}")
+
+
+def briefing(name: str, agent: dict, ticker: str) -> dict:
+    """The verified model summary when one exists and still cites only kept sources; otherwise the rule summary."""
+    reasoning = agent.get("reasoning") or {}
+    summary = reasoning.get("summary") or {}
+    if summary.get("status") == "VERIFIED" and summary.get("text") and             set(llm.CITATION.findall(summary["text"])) <= set(agent["evidence_ids"]):
+        return {"text": summary["text"], "source": "MODEL_VERIFIED", "model_version": reasoning.get("model_version"),
+                "cached": bool(reasoning.get("cached")), "answered_at": reasoning.get("answered_at")}
+    note = None
+    if summary.get("status") == "REJECTED":
+        note = f"Model summary rejected by verification: {summary.get('reason')}"
+    elif summary.get("status") == "VERIFIED":
+        note = "Model summary dropped because a cited source was removed during citation validation"
+    return {"text": rule_summary(name, agent, ticker), "source": "RULES", "model_note": note}
 
 
 ACTIONS = {"REDUCE_EXPOSURE", "HOLD_REVIEW", "HOLD", "ELIGIBLE_TO_ADD", "AVOID_ADDING", "NO_VIEW"}
@@ -559,6 +654,8 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             elif agent["status"] == "OK":
                 agent["status"] = "PARTIAL"
     synthesis = synthesize(agents, signals)
+    for name, agent in agents.items():
+        agent["briefing"] = briefing(name, agent, ticker)
     recommendation = recommend(ticker, profile, agents, synthesis, sectors)
     cited = list(dict.fromkeys(x for a in agents.values() for x in a["evidence_ids"] if x.startswith("E-")))
     evidence = [d for d in retrieved if d["id"] in cited]

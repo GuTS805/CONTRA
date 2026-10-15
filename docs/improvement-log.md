@@ -103,3 +103,22 @@ Scope: PS 04 (VibeFinance): a multi-agent investment intelligence system with at
 - No deployment has been made. Free hosting loses data on restart unless a persistent disk is attached.
 - Yahoo's endpoint is unofficial and unlicensed. Filings are user-supplied and unverified. Tone is a heuristic.
 - No email verification or password reset. Rate limits are per process.
+
+## 15 October 2026 — grounded model briefings and semantic filing search
+
+### Cycle 13: model-written agent briefings (AI depth)
+- Market and Research agents now get a one-to-three sentence model summary, verified by code before display.
+- Real-model findings drove the rules:
+  1. The first run produced no inline citations. The fix attaches every eligible source ID, not only the focus IDs, after one summary described a contract without citing its excerpt.
+  2. The checker rejected "no breaches" until it became negation-aware.
+  3. A summary passed a "numbers must exist in the facts" check while attaching the cap (10%) to the position weight. Numbers were therefore banned from summaries entirely; exact values stay code-computed.
+  4. Risk summaries invented an "acceptable" HHI range. Risk now always uses its exact rule summary, and judgment and limit words are rejected for the other agents.
+- Final warm-up with gpt-4.1-nano: 15 paid calls, 14/14 Market and Research briefings verified. Each was reviewed by hand.
+
+### Cycle 14: semantic filing search
+- Hybrid embeddings + TF-IDF in Ask the filings. The 0.38 threshold was calibrated on separate questions. On held-out paraphrases, Recall@3 is 100% (keywords only: 86%), and 4/4 unrelated questions abstain. The corpus is synthetic.
+- Embeddings are cached, durable, shipped for the demo texts, and capped per account and per day. Provider failure falls back to keywords with a visible note.
+
+### Cycle 15: concurrency fix
+- Three agent threads opening a fresh database at once could run the schema migration concurrently (`OperationalError`). First-time migration is now locked.
+- **Verification:** 59 Python tests and the UI smoke test pass. The report, evaluation and mobile views were inspected in a browser.

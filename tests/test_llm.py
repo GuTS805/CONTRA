@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import redirect_stdout
 import io
 import json
 import os
@@ -46,7 +47,7 @@ class ModelAdapterTests(unittest.TestCase):
             {"key": "filing_excerpt", "value": "Operating margin narrowed.", "source_ids": ["E-01"]}],
             "evidence_ids": ["E-01"]}
         payload = {"model": "fixture-model", "output": [{"type": "message", "content": [
-            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"]})}]}],
+            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"], "summary": "The cited filing reports a narrower operating margin [E-01]."})}]}],
             "usage": {"input_tokens": 12, "output_tokens": 8}}
         with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key"}):
             with patch("contra.llm.urlopen", return_value=FakeResponse(payload)) as request:
@@ -59,7 +60,7 @@ class ModelAdapterTests(unittest.TestCase):
             properties = sent["text"]["format"]["schema"]["properties"]
             self.assertEqual(properties["focus"]["enum"], ["NEGATIVE_FACTS"], "only the valid focus is offered")
             self.assertEqual(properties["supporting_ids"]["items"]["enum"], ["E-01"], "only eligible IDs are offered")
-            payload["output"][0]["content"][0]["text"] = json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["MADE-UP"]})
+            payload["output"][0]["content"][0]["text"] = json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["MADE-UP"], "summary": "Margins narrowed [E-01]."})
             llm.reset_state()
             with patch("contra.llm.urlopen", return_value=FakeResponse(payload)):
                 with self.assertRaises(ValueError):
@@ -70,7 +71,7 @@ class ModelAdapterTests(unittest.TestCase):
             {"key": "filing_excerpt", "value": "Operating margin narrowed.", "source_ids": ["E-01"]}],
             "evidence_ids": ["E-01"]}
         payload = {"model": "fixture-model", "output": [{"type": "message", "content": [
-            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"]})}]}]}
+            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"], "summary": "The cited filing reports a narrower operating margin [E-01]."})}]}]}
         with patch.dict(os.environ, {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_LLM_DAILY_LIMIT": "1"}):
             with patch("contra.llm.urlopen", side_effect=lambda *a, **k: FakeResponse(payload)) as request:
                 first = llm.reason("RESEARCH", result)
@@ -99,7 +100,7 @@ class ModelAdapterTests(unittest.TestCase):
             return {"status": "OK", "assessment": "BEARISH", "facts": [
                 {"key": "filing_excerpt", "value": f"Margin narrowed {n}.", "source_ids": ["E-01"]}], "evidence_ids": ["E-01"]}
         payload = {"model": "fixture-model", "output": [{"type": "message", "content": [
-            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"]})}]}]}
+            {"type": "output_text", "text": json.dumps({"focus": "NEGATIVE_FACTS", "supporting_ids": ["E-01"], "summary": "The cited filing reports a narrower operating margin [E-01]."})}]}]}
         durable = {}
         class Store:
             def get(self, key):
@@ -159,30 +160,51 @@ class ModelAdapterTests(unittest.TestCase):
 
     def test_warm_up_writes_reusable_answers_for_every_scenario(self):
         from pathlib import Path
-        from contra import warm
+        from contra import embeddings, warm
         def answer(request, timeout):
-            facts = json.loads(json.loads(request.data)["input"])
+            body = json.loads(request.data)
+            if request.full_url.endswith("/embeddings"):
+                rows = [{"index": i, "embedding": [((i + 1) * (j + 3)) % 7 / 7 for j in range(256)]}
+                        for i, _ in enumerate(body["input"])]
+                return FakeResponse({"data": rows})
+            facts = json.loads(body["input"])
             focus = next(iter(llm.allowed_focus(facts["agent"], {**facts, "evidence_ids": facts["eligible_evidence_ids"]})))
             ids = facts["eligible_evidence_ids"][:1]
+            choice = {"focus": focus, "supporting_ids": ids}
+            if facts["agent"] != "RISK":
+                choice["summary"] = f"This view rests on [{ids[0]}]." if ids else "No source was eligible for this view."
             return FakeResponse({"model": "fixture-model", "output": [{"type": "message", "content": [
-                {"type": "output_text", "text": json.dumps({"focus": focus, "supporting_ids": ids})}]}]})
+                {"type": "output_text", "text": json.dumps(choice)}]}]})
         with tempfile.TemporaryDirectory() as folder:
-            target = Path(folder) / "model_cache.json"
+            target, vectors_file = Path(folder) / "model_cache.json", Path(folder) / "embedding_cache.json"
             env = {"CONTRA_LLM": "1", "OPENAI_API_KEY": "test-only-key", "CONTRA_DB": folder + "/warm.sqlite3",
                    "CONTRA_ENV_FILE": os.devnull, "CONTRA_LLM_DAILY_LIMIT": "100"}
-            with patch.dict(os.environ, env), patch.object(warm, "WARM_CACHE", target),                  patch("contra.server.WARM_CACHE", target), patch("contra.llm.urlopen", side_effect=answer) as request,                  patch.object(llm, "persistent_cache", None):
-                warm.main()
+            embeddings.reset_state()
+            self.addCleanup(embeddings.reset_state)
+            with patch.dict(os.environ, env), patch.object(warm, "WARM_CACHE", target),                     patch.object(warm, "WARM_EMBEDDINGS", vectors_file), patch("contra.server.WARM_CACHE", target),                     patch("contra.server.WARM_EMBEDDINGS", vectors_file),                     patch("contra.llm.urlopen", side_effect=answer) as request,                     patch("contra.embeddings.urlopen", side_effect=answer) as embed_request,                     patch.object(llm, "persistent_cache", None), patch.object(embeddings, "persistent_cache", None):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    warm.main()
+                self.assertNotIn("Not model-reasoned", output.getvalue())
+                self.assertIn("model-written and verified, 0 replaced by rule summaries", output.getvalue())
                 paid = request.call_count
                 shipped = json.loads(target.read_text(encoding="utf-8"))["answers"]
-                self.assertGreater(len(shipped), 0)
-                self.assertLess(paid, 24, "identical scenario inputs are answered once")
+                self.assertEqual(len(shipped), 15)
+                self.assertEqual(paid, 15, "identical scenario inputs are answered once")
+                self.assertEqual(embed_request.call_count, 1, "all warm-up texts are embedded in one batch")
+                vectors = json.loads(vectors_file.read_text(encoding="utf-8"))["vectors"]
                 llm.reset_state()
-                llm.persistent_cache = None
+                embeddings.reset_state()
                 llm.preload(shipped)
-                investor = store_profiles()[0]
-                report = asyncio.run(analyze("ALPHA.NS", investor))
+                embeddings.preload(vectors)
+                report = asyncio.run(analyze("ALPHA.NS", store_profiles()[0]))
                 self.assertEqual(request.call_count, paid, "a preloaded scenario costs nothing")
                 self.assertTrue(all(a["reasoning"]["cached"] for a in report["agents"].values()))
+                self.assertEqual([a["briefing"]["source"] for a in report["agents"].values()],
+                                 ["MODEL_VERIFIED", "MODEL_VERIFIED", "RULES"], "risk keeps its exact rule briefing")
+                from contra.evaluation import semantic_evaluation
+                self.assertEqual(semantic_evaluation()["status"], "MEASURED", "evaluation runs from shipped vectors")
+                self.assertEqual(embed_request.call_count, 1)
 
 
 def store_profiles():

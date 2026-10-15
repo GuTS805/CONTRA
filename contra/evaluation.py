@@ -6,10 +6,55 @@ import json
 import platform
 from pathlib import Path
 
-from .core import analyze, prepare, retrieve
+from . import embeddings
+from .core import analyze, hybrid_rank, prepare, retrieve
 from .fixtures import AS_OF
 
 HELDOUT_RETRIEVAL = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "heldout_retrieval.json"
+HELDOUT_PARAPHRASE = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "heldout_paraphrase.json"
+
+
+def paraphrase_texts() -> list[str]:
+    """Every question and eligible excerpt the paraphrase evaluation embeds (used by the warm-up)."""
+    bundle = json.loads(HELDOUT_PARAPHRASE.read_text(encoding="utf-8"))
+    texts = []
+    for case in bundle["relevant"] + bundle["unrelated"]:
+        texts += [case["question"]] + [doc["excerpt"] for doc in prepare(case["ticker"], AS_OF)["documents"]]
+    return list(dict.fromkeys(texts))
+
+
+def semantic_evaluation() -> dict:
+    """Lexical versus hybrid retrieval on held-out paraphrases, from cached embeddings only."""
+    bundle = json.loads(HELDOUT_PARAPHRASE.read_text(encoding="utf-8"))
+    def cached(texts):
+        vectors = embeddings.cached_only(texts)
+        if vectors is None:
+            raise LookupError("not cached")
+        return vectors
+    try:
+        rows = []
+        for case in bundle["relevant"]:
+            docs = prepare(case["ticker"], AS_OF)["documents"]
+            gold = set(case["expected_ids"])
+            lexical = {d["id"] for d in retrieve({"as_of": AS_OF, "documents": docs}, case["question"], limit=3)}
+            ranked, info = hybrid_rank(docs, case["question"], cached)
+            if info["semantic_status"] != "OK":
+                raise LookupError("not cached")
+            rows.append((len(lexical & gold), len({d["id"] for d in ranked} & gold), len(gold)))
+        abstained = 0
+        for case in bundle["unrelated"]:
+            ranked, info = hybrid_rank(prepare(case["ticker"], AS_OF)["documents"], case["question"], cached)
+            if info["semantic_status"] != "OK":
+                raise LookupError("not cached")
+            abstained += not ranked
+    except LookupError:
+        return {"status": "NOT_CACHED", "note": "Run python -m contra.warm to cache the evaluation embeddings."}
+    expected = sum(row[2] for row in rows)
+    return {"status": "MEASURED", "relevant_questions": len(rows), "unrelated_questions": len(bundle["unrelated"]),
+            "lexical_recall_at_3": round(sum(row[0] for row in rows) / expected, 3),
+            "hybrid_recall_at_3": round(sum(row[1] for row in rows) / expected, 3),
+            "unrelated_abstained": abstained,
+            "note": "Held-out paraphrases written after the similarity threshold was fixed; synthetic excerpts only."}
 
 
 async def scenario_matrix(conservative: dict, growth: dict) -> dict:
@@ -56,6 +101,7 @@ async def scenario_matrix(conservative: dict, growth: dict) -> dict:
             "retrieval_recall_at_3": round(hits / expected, 3), "retrieval_expected_count": expected,
             "retrieval_case_count": len(retrieval_cases),
             "citation_fabrication_count": fabricated,
+            "semantic_retrieval": semantic_evaluation(),
             "note": "Curated synthetic fixtures test implementation behavior, not future returns."}
 
 
