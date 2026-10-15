@@ -295,6 +295,22 @@ function installMotion(){
   const view=$('#view');
   const preference=window.matchMedia?.('(prefers-reduced-motion: reduce)');
   if(preference?.matches)return;
+  if(window.matchMedia?.('(pointer: fine)').matches){
+    let frame=0,point;
+    view.addEventListener('pointermove',event=>{
+      const hero=event.target.closest?.('.terminal-hero');
+      if(!hero)return;
+      point={hero,x:event.clientX,y:event.clientY};
+      if(frame)return;
+      frame=requestAnimationFrame(()=>{
+        frame=0;
+        if(!point.hero.isConnected)return;
+        const rect=point.hero.getBoundingClientRect();
+        point.hero.style.setProperty('--hero-x',`${point.x-rect.left}px`);
+        point.hero.style.setProperty('--hero-y',`${point.y-rect.top}px`);
+      });
+    });
+  }
   const observer=new IntersectionObserver(entries=>{
     entries.forEach(entry=>{
       if(!entry.isIntersecting)return;
