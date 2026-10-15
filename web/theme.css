@@ -518,3 +518,11 @@ footer span { color: #777175; }
 .inv-steps small { display: block; color: #77716f; font-size: 11px; margin-top: 2px; }
 .inv-reading { font-weight: 700; margin: 8px 0 0; }
 @media (max-width: 980px) { .inv-grid { grid-template-columns: 1fr; } }
+
+/* Real data proof. */
+.proof { padding: 17px 24px 18px; margin-bottom: 12px; }
+.proof-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 12px; }
+.proof-grid div { border-left: 3px solid var(--orange); padding-left: 12px; }
+.proof-grid strong { display: block; font-size: 15px; }
+.proof-grid span { display: block; font-size: 12.5px; color: #77716f; margin-top: 3px; }
+@media (max-width: 980px) { .proof-grid { grid-template-columns: 1fr; } }

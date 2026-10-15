@@ -19,6 +19,16 @@
 
 > **Try it:** Open the [live app](https://contra-h0nw.onrender.com), choose **Continue as guest**, then select **ALPHA.NS + Conservative**. Render's free instance may take about a minute to wake up.
 
+**What is real and what is synthetic**
+
+| Part | Data |
+|---|---|
+| Infosys example | Real: 8 exact excerpts from its SEC EDGAR filings, each cited quote checked against the source text |
+| Added NSE/BSE symbols | Real: Yahoo Finance daily prices |
+| Institutional flows | Real: NSE FII/DII net flows (market-wide) |
+| Backtest | Real: 20 NSE large caps, about 5 years, 1,140 windows. It shows no predictive edge, and the app says so |
+| ALPHA, BETA, GAMMA, DELTA scenarios | Synthetic fixtures with known outcomes, labeled as such in the app |
+
 CONTRA helps an investor inspect *why* market and filing signals disagree, then shows how that evidence interacts with their own holdings and limits. Every run keeps the dated inputs, cited passages, agent findings, profile revision and computed action together. The product is research software: it does not place trades or claim to predict returns.
 
 ## The 60-second demo
