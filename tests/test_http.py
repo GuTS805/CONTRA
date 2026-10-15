@@ -72,6 +72,20 @@ class HttpTests(unittest.TestCase):
     def db_path(self):
         return os.path.join(self.tmp.name, "http.sqlite3")
 
+    def test_flow_comparison_uses_owned_frozen_snapshot(self):
+        owner = self.session()
+        _, report = self.request_json("/v1/analyses", "POST", {
+            "ticker": "ALPHA.NS", "investor_id": "demo_conservative"}, opener=owner)
+        _, compared = self.request_json("/v1/analyses", "POST", {
+            "ticker": "ALPHA.NS", "investor_id": "demo_growth", "source_run_id": report["run_id"]}, opener=owner)
+        self.assertEqual(compared["market_snapshot_hash"], report["market_snapshot_hash"])
+        self.assertEqual(compared["signals"], report["signals"])
+        stranger = self.session()
+        with self.assertRaises(HTTPError) as caught:
+            self.request_json("/v1/analyses", "POST", {
+                "ticker": "ALPHA.NS", "investor_id": "demo_growth", "source_run_id": report["run_id"]}, opener=stranger)
+        self.assertEqual(caught.exception.code, 404)
+
     def test_loopback_origin_and_json_guards(self):
         cases = [
             ("GET", "/v1/stocks", None, {"Host": "attacker.example"}, 403, "INVALID_HOST"),
@@ -115,6 +129,9 @@ class HttpTests(unittest.TestCase):
         self.assertGreater(len(report["market_snapshot"]["bars"]), 21)
         _, replay = self.request_json("/v1/analyses/" + report["run_id"])
         self.assertEqual(replay, report)
+        flow_id = report["signals"]["institutional_flows"]["evidence_ids"][0]
+        _, frozen_flow = self.request_json(f"/v1/analyses/{report['run_id']}/evidence/{flow_id}")
+        self.assertEqual(frozen_flow, report["market_snapshot"]["institutional_flows"][0])
         _, history = self.request_json("/v1/analyses?investor_id=demo_conservative")
         self.assertIn(report["run_id"], [item["run_id"] for item in history["runs"]])
         bar_id = report["signals"]["momentum"]["evidence_ids"][0]

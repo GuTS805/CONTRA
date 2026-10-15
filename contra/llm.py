@@ -174,7 +174,8 @@ def model_status() -> dict:
 # Method parameters an agent may mention; they are part of the model input, so they are grounded.
 CONTEXT = {
     "MARKET": {"lookback_sessions": 20, "momentum_threshold_percent": 3, "volume_elevated_above_ratio": 1.5,
-               "volume_suppressed_below_ratio": 0.7},
+               "volume_suppressed_below_ratio": 0.7,
+               "institutional_scope": "Provisional market-wide capital-market activity across NSE, BSE and MSEI. Never attribute these flows to the analyzed stock; they do not change its momentum assessment."},
     "RESEARCH": {},
     "RISK": {},
 }

@@ -14,7 +14,7 @@ import sys
 import traceback
 from urllib.parse import urlparse, unquote, parse_qs
 
-from . import auth, embeddings, live, llm, public_filings
+from . import auth, embeddings, live, llm, public_filings, flows
 from .core import analyze, ask_filings, portfolio_insights, prepare
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, dataset_hash, documents
 from .evaluation import scenario_matrix, benchmark_fixed
@@ -252,7 +252,7 @@ class Handler(BaseHTTPRequestHandler):
                     if evidence_id == report["investor_snapshot"]["id"]:
                         return self._send(200, report["investor_snapshot"])
                     candidates = report["market_snapshot"]["bars"] + report["evidence"] + \
-                        report["market_snapshot"].get("documents", [])
+                        report["market_snapshot"].get("documents", []) + report["market_snapshot"].get("institutional_flows", [])
                     item = next((entry for entry in candidates if entry["id"] == evidence_id), None)
                     return self._send(200, item) if item else self._error(404, "NOT_FOUND", "Evidence is not in this run")
                 return self._error(404, "NOT_FOUND", "Unknown route")
@@ -428,12 +428,29 @@ class Handler(BaseHTTPRequestHandler):
         if as_of is not None and not isinstance(as_of, str):
             raise ValueError("as_of must be an ISO date")
         warnings = []
-        if dataset_id == DATASET_ID:
+        source_run_id = body.get("source_run_id")
+        if source_run_id is not None:
+            if not isinstance(source_run_id, str):
+                raise ValueError("source_run_id must be a string")
+            source = store.run(db, source_run_id, owner)
+            if source is None:
+                return self._error(404, "NOT_FOUND", "Unknown source run")
+            if source["ticker"] != ticker or source["dataset_id"] != dataset_id or as_of not in (None, source["as_of"]):
+                raise ValueError("Comparison must use the source run's ticker, dataset and date")
+            market = source["market_snapshot"]
+            snapshot = {"ticker": ticker, "as_of": source["as_of"], "dataset_id": dataset_id,
+                        "data_mode": source["data_mode"], "market_snapshot_hash": source["market_snapshot_hash"],
+                        "bars": market["bars"], "documents": market["documents"],
+                        **({"institutional_flows": market["institutional_flows"]} if "institutional_flows" in market else {})}
+            warnings = source.get("data_warnings", [])
+        elif dataset_id == DATASET_ID:
             snapshot = prepare(ticker, as_of or AS_OF)
         else:
             bars, warnings = live.bars(db, ticker)
+            flow_rows, flow_warnings = flows.history(db, as_of or bars[-1]["trade_date"])
+            warnings.extend(flow_warnings)
             snapshot = prepare(ticker, as_of or bars[-1]["trade_date"], bars,
-                               store.user_documents(db, owner, ticker), live.LIVE_DATASET_ID, "LIVE")
+                               store.user_documents(db, owner, ticker), live.LIVE_DATASET_ID, "LIVE", flow_rows)
         sectors = {key: info["sector"] for key, info in catalog.items()}
         report = asyncio.run(analyze(ticker, person, snapshot=snapshot, sectors=sectors, warnings=warnings, owner=owner))
         store.save_run(db, report, owner)

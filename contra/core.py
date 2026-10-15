@@ -14,9 +14,9 @@ import uuid
 from collections import Counter
 
 from .fixtures import AS_OF, DATASET_ID, STOCKS, bars_for, documents
-from . import llm
+from . import llm, flows
 
-METHOD_VERSION = "rules-1.2"
+METHOD_VERSION = "rules-1.3"
 _CLOCK_ANCHOR = datetime.now(timezone.utc)
 _MONOTONIC_ANCHOR = perf_counter_ns()
 
@@ -76,7 +76,7 @@ def validate_agent_payload(agent: str, result: dict) -> None:
 
 
 def prepare(ticker: str, as_of: str, bars: list[dict] | None = None, docs: list[dict] | None = None,
-            dataset_id: str = DATASET_ID, mode: str = "SYNTHETIC") -> dict:
+            dataset_id: str = DATASET_ID, mode: str = "SYNTHETIC", institutional_flows: list[dict] | None = None) -> dict:
     """Freeze the dated bars and documents visible at `as_of`.
 
     Without `bars`, the built-in synthetic fixtures are used. Live callers pass
@@ -103,10 +103,17 @@ def prepare(ticker: str, as_of: str, bars: list[dict] | None = None, docs: list[
         raise ValueError("Document excerpt integrity check failed")
     if any(b["ticker"] != ticker or b["mode"] != mode for b in bars):
         raise ValueError("Invalid market bar provenance")
+    flow_rows = flows.fixture(as_of) if institutional_flows is None and mode == "SYNTHETIC" else list(institutional_flows or [])
+    for record in flow_rows:
+        flows.validate(record, mode)
+    flow_rows = [r for r in flow_rows if r["trade_date"] <= as_of]
+    if len({r["id"] for r in flow_rows}) != len(flow_rows):
+        raise ValueError("Duplicate institutional flow source")
     market_hash = digest({"dataset": dataset_id, "ticker": ticker, "as_of": as_of,
-                          "bars": bars, "documents": docs})
+                          "bars": bars, "documents": docs, "institutional_flows": flow_rows})
     return {"ticker": ticker, "as_of": as_of, "bars": bars, "documents": docs,
-            "market_snapshot_hash": market_hash, "data_mode": mode, "dataset_id": dataset_id}
+            "market_snapshot_hash": market_hash, "data_mode": mode, "dataset_id": dataset_id,
+            "institutional_flows": flow_rows}
 
 
 def numeric_signals(snapshot: dict) -> dict:
@@ -317,11 +324,16 @@ async def timed_agent(name: str, compute, use_model: bool = True, eligible_ids: 
 
 def market_agent(signals: dict) -> dict:
     m, v = signals["momentum"], signals["volume"]
+    flow = signals.get("institutional_flows", {})
+    flow_ids = flow.get("evidence_ids", []) if flow.get("status") == "OK" else []
     return {"status": "OK" if m["status"] == "OK" else "UNAVAILABLE",
             "assessment": m["label"], "evidence_confidence": m["evidence_confidence"],
             "facts": [{"key": "momentum_return", "value": m["value"], "units": "fraction", "source_ids": m["evidence_ids"]},
-                      {"key": "relative_volume", "value": v["value"], "units": "ratio", "source_ids": v["evidence_ids"]}],
-            "evidence_ids": list(dict.fromkeys(m["evidence_ids"] + v["evidence_ids"])), "warnings": []}
+                      {"key": "relative_volume", "value": v["value"], "units": "ratio", "source_ids": v["evidence_ids"]}] +
+                     ([{"key": "market_wide_" + name, "value": flow[name], "units": "INR crore", "source_ids": flow_ids}
+                       for name in ("fii_net", "dii_net")] if flow_ids else []),
+            "evidence_ids": list(dict.fromkeys(m["evidence_ids"] + v["evidence_ids"] + flow_ids)),
+            "warnings": [flow["warning"]] if flow.get("warning") else []}
 
 
 def research_agent(signal: dict, retrieved: list[dict]) -> dict:
@@ -400,7 +412,13 @@ def synthesize(agents: dict, signals: dict) -> dict:
     if not reasons:
         reasons.append({"text": "Available price and filing evidence do not show a directional conflict.",
                         "evidence_ids": market["evidence_ids"][:2] + research["evidence_ids"][:2]})
+    flow = signals.get("institutional_flows")
+    if flow:
+        reasons.append({"text": "Institutional market context: " + flow["reason"] +
+                        " This context does not override stock evidence or portfolio caps.", "evidence_ids": flow["evidence_ids"]})
     return {"state": state, "reasons": reasons, "market_research_disagreement": conflict,
+            "institutional_context": flow["label"] if flow else "UNKNOWN",
+            "signal_completeness": round(sum(s["status"] == "OK" for s in signals.values()) / len(signals), 3),
             "suitability_breach": breach, "evidence_completeness": round(sum(available) / 3, 3),
             "next_step": "Inspect the cited filings and portfolio limits before forming a view."}
 
@@ -616,12 +634,12 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
     as_of = snapshot["as_of"]
     numeric = numeric_signals(snapshot)
     retrieved = retrieve(snapshot, max_age_days=FILING_MAX_AGE_DAYS)
-    signals = {**numeric, "filing_tone": filing_signal(snapshot, retrieved)}
+    signals = {**numeric, "filing_tone": filing_signal(snapshot, retrieved), "institutional_flows": flows.signal(snapshot)}
     start_gate = Barrier(3)
     def parallel(work):
         start_gate.wait(timeout=1)
         return work()
-    allowed_by_agent = {"market": set(numeric["momentum"]["evidence_ids"] + numeric["volume"]["evidence_ids"]),
+    allowed_by_agent = {"market": set(numeric["momentum"]["evidence_ids"] + numeric["volume"]["evidence_ids"] + signals["institutional_flows"]["evidence_ids"]),
                         "research": {doc["id"] for doc in retrieved}, "risk": {profile["id"]}}
     tasks = [timed_agent("MARKET", lambda: parallel(lambda: market_agent(signals)), allow_llm, allowed_by_agent["market"], owner),
              timed_agent("RESEARCH", lambda: parallel(lambda: research_agent(signals["filing_tone"], retrieved)), allow_llm, allowed_by_agent["research"], owner),
@@ -669,6 +687,7 @@ async def analyze(ticker: str, profile: dict, as_of: str = AS_OF, allow_llm: boo
             "market_snapshot_hash": snapshot["market_snapshot_hash"],
             "run_context_hash": digest({"snapshot": snapshot["market_snapshot_hash"], "profile": profile}),
             "market_snapshot": {"bars": snapshot["bars"], "documents": snapshot["documents"],
+                                **({"institutional_flows": snapshot["institutional_flows"]} if "institutional_flows" in snapshot else {}),
                                 "document_ids": [d["id"] for d in snapshot["documents"]]},
             "investor_snapshot": profile,
             "signals": signals, "agents": agents, "synthesis": synthesis, "recommendation": recommendation,

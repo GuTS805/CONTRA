@@ -35,7 +35,8 @@ def verify_run(report):
         market = report.get("market_snapshot", {})
         snapshot_hash = digest({"dataset": report.get("dataset_id"), "ticker": report.get("ticker"),
                                 "as_of": report.get("as_of"), "bars": market.get("bars"),
-                                "documents": market.get("documents")})
+                                "documents": market.get("documents"),
+                                **({"institutional_flows": market["institutional_flows"]} if "institutional_flows" in market else {})})
         if snapshot_hash != report.get("market_snapshot_hash") or \
                 digest({"snapshot": snapshot_hash, "profile": report.get("investor_snapshot")}) != report.get("run_context_hash"):
             raise RunIntegrityError("Saved market or investor snapshot checksum does not match")

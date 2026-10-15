@@ -396,6 +396,13 @@ footer span { color: #777175; }
 }
 
 /* Same evidence, every investor. */
+.signal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.flow-values { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0 10px; }
+.flow-values small, .flow-values strong { display: block; }
+.flow-values strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.flow-in { color: #227052; }
+.flow-out { color: #b83e29; }
+@media (max-width: 700px) { .signal-grid { grid-template-columns: 1fr; } }
 .investors .table-wrap { overflow-x: auto; margin-top: 12px; }
 .investors-table td { vertical-align: top; }
 .investors-table td small { display: block; color: #77716f; font-size: 11px; }

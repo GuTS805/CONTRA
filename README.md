@@ -2,7 +2,7 @@
 
 **Live demo:** <https://contra-h0nw.onrender.com>. Click **Continue as guest**. The free instance sleeps when idle, so the first load can take up to a minute.
 
-CONTRA is an evidence-first investment research assistant. Three agents run concurrently on one frozen snapshot: Market (price momentum and volume), Research (retrieval over dated filing excerpts) and Risk (the investor's own limits). CONTRA then gives a personalized, sized portfolio action with cited reasons and the conditions that would change it.
+CONTRA is an evidence-first investment research assistant. Three agents run concurrently on one frozen snapshot: Market (price momentum, volume and institutional-flow context), Research (retrieval over dated filing excerpts) and Risk (the investor's own limits). CONTRA then gives a personalized, sized portfolio action with cited reasons and the conditions that would change it.
 
 It works on two kinds of data, and each report labels which one it used:
 
@@ -157,3 +157,7 @@ With a server running, `node tests/ui_smoke.js` (or `CONTRA_BASE_URL=... node te
 - The thresholds are design choices, not calibrated predictors. No future-return accuracy is claimed.
 - SQLite and in-memory rate limits suit a single instance.
 - `python -m contra.import_data` still validates offline JSON snapshots for future provider work.
+
+## Fourth signal: institutional flows
+
+Analysis now includes FII/FPI and DII net activity in INR crore, with a dated source drawer and explicit divergence when the two groups take opposite sides. Live runs use provisional combined-exchange NSE data; synthetic scenarios stay labeled synthetic. Missing or stale flows abstain. Saved comparisons reuse the original observation. See [methodology, official sources and historical-data limits](docs/institutional-flows.md).
